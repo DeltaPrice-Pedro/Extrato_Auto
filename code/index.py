@@ -78,7 +78,9 @@ class application:
 
         self.bancoEntry = StringVar(self.index)
 
-        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Bradesco','Inter','Itaú','Mercado Pago','Nubank','Pagbank','Santander','Stone','Sicob')
+        self.bancoEntryOpt = ('Caixa')
+                              
+        #'Banco do Brasil','Bradesco','Inter','Itaú','Mercado Pago','Nubank','Pagbank','Santander','Stone','Sicob')
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -97,23 +99,50 @@ class application:
         tamanho = len(arquivo)
         return arquivo[tamanho-3 : tamanho]
 
+    def custom_banco(self, arquivo, banco):
+        if banco.get() == 'Caixa':
+            lista_tabelas = []
+
+            for tabelas in arquivo:
+                tabelas.fillna(0.0, inplace=True)
+                tabelas.columns = ["Data Mov.", "Nr. Doc.", "Histórico",'', "Valor"]
+                lista_tabelas.append(tabelas.loc[tabelas['Histórico'] != 0.0])
+
+                arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
+
+        elif banco.get() == '':
+            ...
+        else:
+            return None
+        
+        return arquivoFinal
 
     def ler_arq(self, arquivo, banco):
-        tipo = self.definir_tipo(arquivo)
+        try:
+            tipo = self.definir_tipo(arquivo)
+            arquivoFinal = ''
 
-        if tipo == 'pdf':
-            arquivoLido = tb.read_pdf(arquivo, pages='all', multiple_tables=True)
+            if tipo == 'pdf':
+                arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
 
-        elif tipo == 'lsx':
-            arquivoLido = pd.read_excel(arquivo)
+                arquivoFinal = self.custom_banco(arquivoLido, banco)
 
-        print('deu')
+            elif tipo == 'lsx':
+                arquivoLido = pd.read_excel(arquivo)
+            
+            else:
+                raise ValueError('Formato de arquivo inválido')
 
-        arquivoLido[0].to_excel('Arquivo_result.xlsx')
-        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+            if banco == '':
+                raise ValueError('Banco inválido, favor selecioná-lo')
 
-        os.startfile('arquivo_result.xlsx')
+            else:
+                arquivoFinal.to_excel('Arquivo_result.xlsx')
+                messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+
+                os.startfile('arquivo_result.xlsx')
+        except:
+            messagebox.showinfo(title='Aviso', message='Dados inválidos')
+            #pegar valor do raise dps
 
 application()
-
-#typing-extensions, lxml,
