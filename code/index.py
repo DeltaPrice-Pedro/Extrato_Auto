@@ -75,12 +75,14 @@ class application:
         Label(self.index, text='Escolha o banco emissor:',\
             background='lightblue', font=(10))\
                 .place(relx=0.6,rely=0.3)
+        
+        Label(self.index, text='POR ENQUANTO APENAS "CAIXA" FUNCIONA',\
+            background='lightblue', font=(10))\
+                .place(relx=0.4,rely=0.2)
 
         self.bancoEntry = StringVar(self.index)
 
-        self.bancoEntryOpt = ('Caixa')
-                              
-        #'Banco do Brasil','Bradesco','Inter','Itaú','Mercado Pago','Nubank','Pagbank','Santander','Stone','Sicob')
+        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Bradesco','Inter','Itaú','Mercado Pago','Nubank','Pagbank','Santander','Stone','Sicob')
 
         self.bancoEntry.set('Escolha aqui')
 
