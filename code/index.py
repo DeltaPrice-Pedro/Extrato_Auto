@@ -47,14 +47,12 @@ class application:
             command= lambda: self.pageSN())\
                 .place(relx=0.60,rely=0.7,relwidth=0.25,relheight=0.15)
 
-    
-
     def index(self):
         self.index = Frame(self.window, bd=4, bg='lightblue')
         self.index.place(relx=0.05,rely=0.05,relwidth=0.9,relheight=0.9)
 
         #Titulo
-        Label(self.index, text='Conversor de Extrato PDF', background='lightblue', font=('Bold', 17))\
+        Label(self.index, text='Conversor de Extrato', background='lightblue', font=('Bold', 17))\
             .place(relx=0.35,rely=0.05)
 
         #Labels e Entrys
@@ -104,16 +102,17 @@ class application:
         tipo = self.definir_tipo(arquivo)
 
         if tipo == 'pdf':
-            arquivoLido = tb.read_pdf(arquivo)
+            arquivoLido = tb.read_pdf(arquivo, pages='all', multiple_tables=True)
 
         elif tipo == 'lsx':
             arquivoLido = pd.read_excel(arquivo)
 
         print('deu')
 
-        #arquivoLido[0].to_excel('Arquivo_result.xlsx')
-        #messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-        #os.startfile('arquivo_result.xlsx')
+        arquivoLido[0].to_excel('Arquivo_result.xlsx')
+        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+
+        os.startfile('arquivo_result.xlsx')
 
 application()
 
