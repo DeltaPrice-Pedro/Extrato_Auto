@@ -50,7 +50,7 @@ class application:
             background='lightblue', font=(10))\
                 .place(relx=0.15,rely=0.5)
         
-        self.rdButton = StringVar()
+        self.rdButton = BooleanVar()
 
         self.rdButton.set(True)
 
@@ -97,10 +97,22 @@ class application:
 
                 arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
-                arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= ordem)
+                arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= ordem.get())
 
         elif banco.get() == 'Banco do Brasil':
-            ...
+            lista_tabelas = []
+
+            for tabelas in arquivo:
+                tabelas.fillna(0.0, inplace=True)
+                for index, row in tabelas.iterrows():
+                    if row['balancete'] == 0.0:
+                        linhaAcima = tabelas.iloc[index - 1]
+                        tabelas.loc[[index - 1],['Histórico']] = linhaAcima['Histórico']+ ': ' + row['Histórico']
+                lista_tabelas.append(tabelas.loc[tabelas['balancete'] != 0.0])
+
+            arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
+
+            arquivoFinal = arquivoFinal.sort_values('balancete', ascending= ordem.get())
 
         elif banco.get() == 'Santa Fé':
             lista= ["Data", "Observação", "Data Balancete","Agência Origem","Lote","Num. Documento","Cod. Histórico","Histórico","Valor R$","Inf.","Detalhamento Hist."]
@@ -110,7 +122,7 @@ class application:
 
             arquivoFinal = arquivo[["Data", "Agência Origem","Histórico","Valor R$","Inf."]]
 
-            arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem)
+            arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem.get())
 
         else:
             return None
