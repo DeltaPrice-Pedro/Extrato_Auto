@@ -52,11 +52,11 @@ class application:
         
         self.rdButton = StringVar()
 
-        self.rdButton.set(False)
+        self.rdButton.set(True)
 
-        Radiobutton(self.index, text='Crescente', value=False, variable=self.rdButton).place(relx=0.15,rely=0.57,relwidth=0.2,relheight=0.04)
+        Radiobutton(self.index, text='Crescente', value=True, variable=self.rdButton).place(relx=0.15,rely=0.57,relwidth=0.2,relheight=0.04)
 
-        Radiobutton(self.index, text='Decrescente', value=True,variable=self.rdButton).place(relx=0.31,rely=0.57,relwidth=0.2,relheight=0.04)
+        Radiobutton(self.index, text='Decrescente', value=False,variable=self.rdButton).place(relx=0.31,rely=0.57,relwidth=0.2,relheight=0.04)
 
         ###########Banco
         Label(self.index, text='Escolha o banco emissor:',\
@@ -97,8 +97,7 @@ class application:
 
                 arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
-                if ordem:
-                    arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= False)
+                arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= ordem)
 
         elif banco.get() == 'Banco do Brasil':
             ...
@@ -111,8 +110,7 @@ class application:
 
             arquivoFinal = arquivo[["Data", "Agência Origem","Histórico","Valor R$","Inf."]]
 
-            if ordem:
-                arquivoFinal = arquivoFinal.sort_values('Data', ascending= False)
+            arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem)
 
         else:
             return None
@@ -145,6 +143,8 @@ class application:
 
         except (ValueError, FileNotFoundError) as error:
             messagebox.showinfo(title='Aviso', message= error)
+        except PermissionError:
+            messagebox.showinfo(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
 
 
 application()
