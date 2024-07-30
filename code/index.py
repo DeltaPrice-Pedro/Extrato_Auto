@@ -39,14 +39,14 @@ class application:
 
         self.nome_arq = ''
         self.arqLabel = Label(self.index)
-        self.arqLabel['font'] = 10
-        self.arqLabel.place(relx=0.21,rely=0.37,relwidth=0.3)
+        self.arqLabel.config(font=("Arial", 8, 'bold italic'))
+        self.arqLabel.place(relx=0.21,rely=0.37,relwidth=0.35, relheight=0.055)
         
         Button(self.index, text='Enviar',\
             command= lambda: self.inserir_arq())\
                 .place(relx=0.15,rely=0.37,relwidth=0.06,relheight=0.055)
         
-        Label(self.index, text='Ordem da coluna de "Datas"',\
+        Label(self.index, text='Ordem da coluna de "Datas":',\
             background='lightblue', font=(10))\
                 .place(relx=0.15,rely=0.5)
         
