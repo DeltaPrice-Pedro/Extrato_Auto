@@ -16,36 +16,12 @@ class application:
 
     def tela(self):
         self.window.configure(background='darkblue')
-        self.window.resizable(True,True)
-        self.window.minsize(width=860, height=500)
-        self.window.maxsize(width=860, height=500)
+        self.window.resizable(False,False)
+        self.window.geometry('860x500')
+        # self.window.minsize(width=860, height=500)
+        # self.window.maxsize(width=860, height=500)
+        self.window.iconbitmap('')
         self.window.title('Gerador de CPS')
-
-        self.menu = Frame(self.window, bd=4, bg='lightblue')
-        self.menu.place(relx=0.05,rely=0.05,relwidth=0.9,relheight=0.9)
-
-        self.textOrientacao = Label(self.menu, text='Selecione o tipo de CPS que deseja fazer:', background='lightblue', font=('Bold', 15))\
-        .place(relx=0.12,rely=0.1,relheight=0.15)
-
-        #Pessoa física
-        self.btnPF = Button(self.menu, text='CPS Pessoa Física',\
-            command= lambda: self.pagePF())\
-                .place(relx=0.15,rely=0.7,relwidth=0.25,relheight=0.15)
-
-        #Inatividade
-        self.btnIN = Button(self.menu, text='CPS Inatividade',\
-            command= lambda: self.pageIN())\
-                .place(relx=0.60,rely=0.4,relwidth=0.25,relheight=0.15)
-
-        #Lucro Presumido
-        self.btnLP = Button(self.menu, text='CPS Lucro Presumido',\
-            command= lambda: self.pageLP())\
-                .place(relx=0.15,rely=0.4,relwidth=0.25,relheight=0.15)
-
-        #Simples Nacional
-        self.btnSN = Button(self.menu, text='CPS Simples Nacional',\
-            command= lambda: self.pageSN())\
-                .place(relx=0.60,rely=0.7,relwidth=0.25,relheight=0.15)
 
     def index(self):
         self.index = Frame(self.window, bd=4, bg='lightblue')
@@ -59,49 +35,72 @@ class application:
         ###########Arquivo
         Label(self.index, text='Insira aqui o arquivo:',\
             background='lightblue', font=(10))\
-                .place(relx=0.2,rely=0.3)
+                .place(relx=0.15,rely=0.3)
 
         self.nome_arq = ''
-        self.arqLabel = Label(self.index, text=self.nome_arq,\
-            background='white', font=(10))\
-                .place(relx=0.2,rely=0.37,relwidth=0.2)
+        self.arqLabel = Label(self.index)
+        self.arqLabel['font'] = 10
+        self.arqLabel.place(relx=0.21,rely=0.37,relwidth=0.3)
         
         Button(self.index, text='Enviar',\
             command= lambda: self.inserir_arq())\
                 .place(relx=0.15,rely=0.37,relwidth=0.06,relheight=0.055)
         
+        Label(self.index, text='Ordem da data',\
+            background='lightblue', font=(10))\
+                .place(relx=0.15,rely=0.5)
+        
+        self.rdButton = StringVar()
+
+        self.rdButton.set(False)
+
+        Radiobutton(self.index, text='Crescente', value=False, variable=self.rdButton).place(relx=0.2,rely=0.57,relwidth=0.1,relheight=0.04)
+
+        Radiobutton(self.index, text='Decrescente', value=True,variable=self.rdButton).place(relx=0.325,rely=0.57,relwidth=0.1,relheight=0.04)
 
         ###########Banco
         Label(self.index, text='Escolha o banco emissor:',\
             background='lightblue', font=(10))\
                 .place(relx=0.6,rely=0.3)
         
-        Label(self.index, text='POR ENQUANTO APENAS "CAIXA" FUNCIONA',\
-            background='lightblue', font=(10))\
-                .place(relx=0.4,rely=0.2)
-
         self.bancoEntry = StringVar(self.index)
 
-        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Bradesco','Inter','Itaú','Mercado Pago','Nubank','Pagbank','Santander','Stone','Sicob')
+        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Santa Fé','Bradesco','Inter','Itaú','Mercado Pago','Nubank','Pagbank','Santander','Stone','Sicob')
 
         self.bancoEntry.set('Escolha aqui')
 
         self.popup = OptionMenu(self.index, self.bancoEntry, *self.bancoEntryOpt)\
             .place(relx=0.6,rely=0.37,relwidth=0.2,relheight=0.06)
+        
+        self.colunaSep = {}
 
+        Label(self.index, text='Fitrar coluna por valor? \n(Caso não queira, deixe vazio)',\
+            background='lightblue', font=(10))\
+                .place(relx=0.6,rely=0.3)
+
+        self.colunaEntry = Entry(self.index,\
+            textvariable=self.nomeColumn)\
+                .place(relx=0.6,rely=0.3,relwidth=0.05,relheight=0.05)
+
+        self.valorEntry = Entry(self.index,\
+            textvariable=self.nomeVal)\
+                .place(relx=0.6,rely=0.3,relwidth=0.05,relheight=0.05)
+        
         #Botão enviar
         Button(self.index, text='Gerar CPS',\
-            command= lambda: self.ler_arq(self.nome_arq,self.bancoEntry))\
+            command= lambda: self.ler_arq(self.nome_arq,self.bancoEntry, self.rdButton, self.columSep))\
                 .place(relx=0.35,rely=0.8,relwidth=0.35,relheight=0.12)
         
     def inserir_arq(self):
         self.nome_arq = filedialog.askopenfilename()
+        ultima_barra = self.nome_arq.rfind('/')
+        self.arqLabel['text'] = self.nome_arq[ultima_barra+1:]
 
     def definir_tipo(self, arquivo):
         tamanho = len(arquivo)
         return arquivo[tamanho-3 : tamanho]
 
-    def custom_banco(self, arquivo, banco):
+    def custom_banco(self, arquivo, banco, ordem):
         if banco.get() == 'Caixa':
             lista_tabelas = []
 
@@ -112,40 +111,64 @@ class application:
 
                 arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
-        elif banco.get() == '':
+                if ordem:
+                    arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= False)
+
+        elif banco.get() == 'Banco do Brasil':
             ...
+
+        elif banco.get() == 'Santa Fé':
+            lista= ["Data", "Observação", "Data Balancete","Agência Origem","Lote","Num. Documento","Cod. Histórico","Histórico","Valor R$","Inf.","Detalhamento Hist."]
+            arquivo = arquivo.rename(columns=dict(zip(arquivo.columns, lista)))
+            arquivo = arquivo.drop(0, axis=0)
+            arquivo = arquivo.drop(1, axis=0)
+
+            arquivoFinal = arquivo[["Data", "Agência Origem","Histórico","Valor R$","Inf."]]
+
+            if ordem:
+                arquivoFinal = arquivoFinal.sort_values('Data', ascending= False)
+
         else:
             return None
         
         return arquivoFinal
 
-    def ler_arq(self, arquivo, banco):
+    def ler_arq(self, arquivo, banco, ordem, colunaSep):
         try:
+            if arquivo == '':
+                raise FileNotFoundError('Insira um arquivo')
+            
+            if banco.get() == 'Escolha aqui':
+                raise ValueError('Banco inválido, favor selecioná-lo')
+            
             tipo = self.definir_tipo(arquivo)
             arquivoFinal = ''
 
             if tipo == 'pdf':
                 arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
-
-                arquivoFinal = self.custom_banco(arquivoLido, banco)
-
             elif tipo == 'lsx':
                 arquivoLido = pd.read_excel(arquivo)
-            
             else:
                 raise ValueError('Formato de arquivo inválido')
 
-            if banco == '':
-                raise ValueError('Banco inválido, favor selecioná-lo')
+            arquivoFinal = self.custom_banco(arquivoLido, banco, ordem)
+            arquivoFinal.to_excel('Arquivo_result.xlsx')
 
-            else:
-                arquivoFinal.to_excel('Arquivo_result.xlsx')
-                messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+            if colunaSep != '':
+                if colunaSep in arquivoFinal.colums:
+                    arquivo_novo = arquivo.loc[arquivo.apply(lambda row: row[colunaSep] == 'D', axis=1)]
 
-                os.startfile('arquivo_result.xlsx')
-        except:
-            messagebox.showinfo(title='Aviso', message='Dados inválidos')
-            #pegar valor do raise dps
+                    with pd.ExcelWriter('Arquivo_result.xlsx', mode='a', engine='openpyxl') as writer:
+                        arquivo_novo.to_excel(writer, sheet_name= colunaSep, index=False)
+                else:
+                    raise ValueError('Coluna não consta no arquivo')
+
+            messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+            os.startfile('arquivo_result.xlsx')
+
+        except (ValueError, FileNotFoundError) as error:
+            messagebox.showinfo(title='Aviso', message= error)
+
 
 application()
 
