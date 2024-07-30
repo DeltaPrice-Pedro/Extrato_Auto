@@ -46,7 +46,7 @@ class application:
             command= lambda: self.inserir_arq())\
                 .place(relx=0.15,rely=0.37,relwidth=0.06,relheight=0.055)
         
-        Label(self.index, text='Ordem da data',\
+        Label(self.index, text='Ordem da coluna de "Datas"',\
             background='lightblue', font=(10))\
                 .place(relx=0.15,rely=0.5)
         
@@ -54,9 +54,9 @@ class application:
 
         self.rdButton.set(False)
 
-        Radiobutton(self.index, text='Crescente', value=False, variable=self.rdButton).place(relx=0.2,rely=0.57,relwidth=0.1,relheight=0.04)
+        Radiobutton(self.index, text='Crescente', value=False, variable=self.rdButton).place(relx=0.15,rely=0.57,relwidth=0.2,relheight=0.04)
 
-        Radiobutton(self.index, text='Decrescente', value=True,variable=self.rdButton).place(relx=0.325,rely=0.57,relwidth=0.1,relheight=0.04)
+        Radiobutton(self.index, text='Decrescente', value=True,variable=self.rdButton).place(relx=0.31,rely=0.57,relwidth=0.2,relheight=0.04)
 
         ###########Banco
         Label(self.index, text='Escolha o banco emissor:',\
@@ -72,23 +72,9 @@ class application:
         self.popup = OptionMenu(self.index, self.bancoEntry, *self.bancoEntryOpt)\
             .place(relx=0.6,rely=0.37,relwidth=0.2,relheight=0.06)
         
-        self.colunaSep = {}
-
-        Label(self.index, text='Fitrar coluna por valor? \n(Caso não queira, deixe vazio)',\
-            background='lightblue', font=(10))\
-                .place(relx=0.6,rely=0.3)
-
-        self.colunaEntry = Entry(self.index,\
-            textvariable=self.nomeColumn)\
-                .place(relx=0.6,rely=0.3,relwidth=0.05,relheight=0.05)
-
-        self.valorEntry = Entry(self.index,\
-            textvariable=self.nomeVal)\
-                .place(relx=0.6,rely=0.3,relwidth=0.05,relheight=0.05)
-        
         #Botão enviar
-        Button(self.index, text='Gerar CPS',\
-            command= lambda: self.ler_arq(self.nome_arq,self.bancoEntry, self.rdButton, self.columSep))\
+        Button(self.index, text='Gerar Extrato',\
+            command= lambda: self.ler_arq(self.nome_arq,self.bancoEntry, self.rdButton))\
                 .place(relx=0.35,rely=0.8,relwidth=0.35,relheight=0.12)
         
     def inserir_arq(self):
@@ -133,7 +119,7 @@ class application:
         
         return arquivoFinal
 
-    def ler_arq(self, arquivo, banco, ordem, colunaSep):
+    def ler_arq(self, arquivo, banco, ordem):
         try:
             if arquivo == '':
                 raise FileNotFoundError('Insira um arquivo')
@@ -153,15 +139,6 @@ class application:
 
             arquivoFinal = self.custom_banco(arquivoLido, banco, ordem)
             arquivoFinal.to_excel('Arquivo_result.xlsx')
-
-            if colunaSep != '':
-                if colunaSep in arquivoFinal.colums:
-                    arquivo_novo = arquivo.loc[arquivo.apply(lambda row: row[colunaSep] == 'D', axis=1)]
-
-                    with pd.ExcelWriter('Arquivo_result.xlsx', mode='a', engine='openpyxl') as writer:
-                        arquivo_novo.to_excel(writer, sheet_name= colunaSep, index=False)
-                else:
-                    raise ValueError('Coluna não consta no arquivo')
 
             messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
             os.startfile('arquivo_result.xlsx')
