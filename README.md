@@ -8,6 +8,10 @@ estão na versão desatualizada para funcionarem no pyinstaller
 
 solicitado na hora do pyinstaller, instaldo com pip semp problemas
 
-# pip install JPype1
+# JPype1!
 
-Java é necessário para executar o programa, ele precisa ser instalado
+Java é necessário para executar o programa, talvez ele precisa ser instalado
+
+# JVM!
+
+Faz a ponte com os módulos do Java, talvez seja necessário

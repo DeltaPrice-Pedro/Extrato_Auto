@@ -6,6 +6,7 @@ import pandas as pd
 import os
 
 window = Tk()
+os.environ["JAVA_HOME"] ="C:/Users/pedro/OneDrive/Documentos/Trabalhinhos/Extrato_Auto/venv/Lib/site-packages/jvm"
 
 class application:
     def __init__(self):
@@ -21,7 +22,7 @@ class application:
         # self.window.minsize(width=860, height=500)
         # self.window.maxsize(width=860, height=500)
         self.window.iconbitmap('')
-        self.window.title('Gerador de CPS')
+        self.window.title('Conversor de Extrato')
 
     def index(self):
         self.index = Frame(self.window, bd=4, bg='lightblue')
@@ -164,6 +165,6 @@ class application:
         except PermissionError:
             messagebox.showinfo(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
         except Exception as error:
-            messagebox.showinfo(title='Aviso', message= error + error.__class__)
+            messagebox.showinfo(title='Aviso', message= error + "Nome da classe:" + error.__class__)
 
 application()
