@@ -4,6 +4,10 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 import tabula as tb
 import pandas as pd
 import os
+import jpype
+
+# Iniciar a JVM
+jpype.startJVM(jpype.getDefaultJVMPath(), "-ea")
 
 os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
 
@@ -166,7 +170,9 @@ class application:
             messagebox.showinfo(title='Aviso', message= error)
         except PermissionError:
             messagebox.showinfo(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showinfo(title='Aviso', message= 'Arquivo não compativel a esse banco')
         except Exception as error:
-            messagebox.showinfo(title='Aviso', message= error + "Nome da classe:" + error.__class__)
+            messagebox.showinfo(title='Aviso', message= error.__class__)
 
 application()
