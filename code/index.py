@@ -5,8 +5,10 @@ import tabula as tb
 import pandas as pd
 import os
 
+os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
+
+
 window = Tk()
-os.environ["JAVA_HOME"] ="C:/Users/pedro/OneDrive/Documentos/Trabalhinhos/Extrato_Auto/venv/Lib/site-packages/jvm"
 
 class application:
     def __init__(self):
