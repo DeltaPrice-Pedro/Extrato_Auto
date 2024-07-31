@@ -163,8 +163,7 @@ class application:
             messagebox.showinfo(title='Aviso', message= error)
         except PermissionError:
             messagebox.showinfo(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-
+        except Exception as error:
+            messagebox.showinfo(title='Aviso', message= error)
 
 application()
-
-#Sesas
