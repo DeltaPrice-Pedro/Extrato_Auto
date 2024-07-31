@@ -1,6 +1,6 @@
 from tkinter import *
 from tkinter import messagebox
-from tkinter import filedialog
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 import tabula as tb
 import pandas as pd
 import os
@@ -78,7 +78,7 @@ class application:
                 .place(relx=0.35,rely=0.8,relwidth=0.35,relheight=0.12)
         
     def inserir_arq(self):
-        self.nome_arq = filedialog.askopenfilename()
+        self.nome_arq = askopenfilename()
         ultima_barra = self.nome_arq.rfind('/')
         self.arqLabel['text'] = self.nome_arq[ultima_barra+1:]
 
@@ -148,10 +148,16 @@ class application:
                 raise ValueError('Formato de arquivo inválido')
 
             arquivoFinal = self.custom_banco(arquivoLido, banco, ordem)
-            arquivoFinal.to_excel('Arquivo_result.xlsx')
+
+            file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
+
+            arquivoFinal.to_excel(file+'.xlsx')
 
             messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-            os.startfile('arquivo_result.xlsx')
+
+            os.startfile(file+'.xlsx')
+
+
 
         except (ValueError, FileNotFoundError) as error:
             messagebox.showinfo(title='Aviso', message= error)
