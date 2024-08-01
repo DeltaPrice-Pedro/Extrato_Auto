@@ -160,13 +160,13 @@ class application:
             os.startfile(file+'.xlsx')
 
 
-        except (ValueError, FileNotFoundError) as error:
-            messagebox.showerror(title='Aviso', message= error)
+        except ValueError:
+            messagebox.showerror(title='Aviso', message= 'Operação cancelada')
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
