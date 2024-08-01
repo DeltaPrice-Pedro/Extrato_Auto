@@ -1,6 +1,6 @@
-# setuptool 
+# setuptools====70.3.0
 e 
-# importlib_resources 
+# importlib_resources==4.0.0
 
 estão na versão desatualizada para funcionarem no pyinstaller
 
@@ -12,6 +12,6 @@ solicitado na hora do pyinstaller, instaldo com pip semp problemas
 
 Java é necessário para executar o programa, talvez ele precisa ser instalado
 
-# JVM!
+# Openpyxl
 
-Faz a ponte com os módulos do Java, talvez seja necessário
+Solicitado para abrir arquivos xlsx, necessário

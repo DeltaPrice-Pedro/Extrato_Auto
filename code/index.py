@@ -5,14 +5,34 @@ import tabula as tb
 import pandas as pd
 import os
 import jpype
+import subprocess
 
-# Iniciar a JVM
-jpype.startJVM(jpype.getDefaultJVMPath(), "-ea")
 
-os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
 
+# cmd = "grep -r * | grep jquery"
+# print cmd
+
+# try:
+#     subprocess.check_output(cmd, shell=True)
+# except subprocess.CalledProcessError as e:
+#     print e.returncode
+#     print e.output
 
 window = Tk()
+
+if os.path.isdir("C:/Program Files/Java/jdk-22"):
+    os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
+    print("A variável JAVA_HOME foi definida")
+
+else:
+    resp = messagebox.askyesno(title='Aviso', message= 'Verificamos que não possui um dos requisitos do sistema, podemos prosseguir com a instalação do Java JDK?')
+
+    if resp == 'yes':
+        ...
+    #jdk-22.0.0_windows-x64_bin.exe /s /d "C:/Program Files/Java/jdk-22"
+    elif resp == 'no':
+        ...
+        #fechar programa
 
 class application:
     def __init__(self):
@@ -167,12 +187,14 @@ class application:
 
 
         except (ValueError, FileNotFoundError) as error:
-            messagebox.showinfo(title='Aviso', message= error)
+            messagebox.showerror(title='Aviso', message= error)
         except PermissionError:
-            messagebox.showinfo(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
         except UnboundLocalError:
-            messagebox.showinfo(title='Aviso', message= 'Arquivo não compativel a esse banco')
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
         except Exception as error:
-            messagebox.showinfo(title='Aviso', message= error.__class__)
+            messagebox.showerror(title='Aviso', message= error)
+
+            #CalledProcessError
 
 application()
