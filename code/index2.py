@@ -1,12 +1,51 @@
 from tkinter import *
 from tkinter import messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+
 import tabula as tb
 import pandas as pd
-import subprocess
+
 import os
+from sys import exit
+import subprocess
+import requests
 
 window = Tk()
+
+#Instalar o JDK e/ou instanciar o JAVA_HOME  
+class JDK:
+    if os.path.isdir("C:/Program Files/Java/jdk-22"):
+        os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
+        print("A variável JAVA_HOME foi definida")
+
+    else:
+        resp = messagebox.askyesno(title='Aviso', message= 'Verificamos que não possui um dos requisitos do sistema, podemos prosseguir com a instalação do Java JDK?')
+
+        if resp == True:
+            try:
+                response = requests.get('https://download.oracle.com/java/22/latest/jdk-22_windows-x64_bin.exe', stream=True)
+
+                #perguntar onde baixar o instalador
+                with open('c:/Users/DELTAASUS/Downloads', 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                            
+                #jdk-22.0.0_windows-x64_bin.exe /s /d "C:/Program Files/Java/jdk-22"
+
+                jdk_installer = "c:/Users/DELTAASUS/Downloads/jdk-22_windows-x64_bin.exe"
+                jdk_install_dir = "C:/Program Files/Java/jdk-22"
+
+                resultado = subprocess.run([jdk_installer, "/s", "/d", jdk_install_dir], capture_output=True, text=True)
+                print(resultado.stdout)
+
+                #os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
+                messagebox.showwarning(title='Aviso', message= 'Download concluído, favor fechar e abrir o programa')
+            except subprocess.CalledProcessError as e:
+                print(f"Erro ao executar o comando: {e}")
+
+        elif resp == False:
+            exit() #Fechar programa
 
 class application:
     def __init__(self):
@@ -142,8 +181,10 @@ class application:
             arquivoFinal = ''
 
             if tipo == 'pdf':
-                arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
-                
+                try:
+                    arquivoLido = tb.read_pdf(arquivo, stream=True)
+                except subprocess.CalledProcessError as e:
+                    messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela: {e}")
             elif tipo == 'lsx':
                 arquivoLido = pd.read_excel(arquivo)
             else:
@@ -166,9 +207,10 @@ class application:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError as e:
-            messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
 
+            #CalledProcessError
+
+#JDK()
 application()

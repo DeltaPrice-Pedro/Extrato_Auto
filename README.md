@@ -8,14 +8,8 @@ estão na versão desatualizada para funcionarem no pyinstaller
 
 solicitado na hora do pyinstaller, instaldo com pip semp problemas
 
-# JPype1!
-
-Java é necessário para executar o programa, talvez ele precisa ser instalado
-
 # Openpyxl
 
 Solicitado para abrir arquivos xlsx, necessário
 
-# Request
-
-Para fazer instalação de link do JVK
+# NUNCA INSTALE MÓDULOS DESNECESSÁRIOS
