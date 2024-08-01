@@ -1,11 +1,15 @@
 from tkinter import *
 from tkinter import messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+
 import tabula as tb
 import pandas as pd
+
+
 import os
 import jpype
 import subprocess
+from sys import exit
 
 
 
@@ -28,11 +32,22 @@ else:
     resp = messagebox.askyesno(title='Aviso', message= 'Verificamos que não possui um dos requisitos do sistema, podemos prosseguir com a instalação do Java JDK?')
 
     if resp == 'yes':
-        ...
-    #jdk-22.0.0_windows-x64_bin.exe /s /d "C:/Program Files/Java/jdk-22"
+        try:
+            #jdk-22.0.0_windows-x64_bin.exe /s /d "C:/Program Files/Java/jdk-22"
+
+            jdk_installer = "https://download.oracle.com/java/22/latest/jdk-22_windows-x64_bin.exe"
+            jdk_install_dir = "C:/Program Files/Java/jdk-22"
+
+            resultado = subprocess.run([jdk_installer, "/s", "/d", jdk_install_dir], capture_output=True, text=True)
+            print(resultado.stdout)
+
+            #os.environ["JAVA_HOME"] ="C:/Program Files/Java/jdk-22"
+            messagebox.showwarning(title='Aviso', message= 'Download concluído, favor fechar e abrir o programa')
+        except subprocess.CalledProcessError as e:
+            print(f"Erro ao executar o comando: {e}")
+            
     elif resp == 'no':
-        ...
-        #fechar programa
+        exit() #Fechar programa
 
 class application:
     def __init__(self):
