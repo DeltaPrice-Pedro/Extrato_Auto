@@ -15,3 +15,7 @@ Java é necessário para executar o programa, talvez ele precisa ser instalado
 # Openpyxl
 
 Solicitado para abrir arquivos xlsx, necessário
+
+# Request
+
+Para fazer instalação de link do JVK
