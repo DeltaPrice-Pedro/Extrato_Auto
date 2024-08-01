@@ -12,4 +12,4 @@ solicitado na hora do pyinstaller, instaldo com pip semp problemas
 
 Solicitado para abrir arquivos xlsx, necessário
 
-# NUNCA INSTALE MÓDULOS DESNECESSÁRIOS
+# NUNCA INSTALE MÓDULOS SEM QUE SEJAM PEDIDOS
