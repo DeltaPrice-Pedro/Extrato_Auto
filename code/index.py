@@ -8,7 +8,16 @@ import os
 
 window = Tk()
 
+class arquivo:
+    ...
+    #Cada arquivo possui um banco
+
+class bancos:
+    ...
+    #Cada banco possui uma lógica de transformação
+
 class application:
+    #Gerencia a entrada de dados, como o main
     def __init__(self):
         self.window = window
         self.tela()
@@ -92,13 +101,38 @@ class application:
             lista_tabelas = []
 
             for tabelas in arquivo:
+                #Filtrando as colunas
+                tabelas.columns = ["Data Mov.", "", "Histórico",'', "Valor"]
+                tabelas = tabelas.drop('', axis=1)
+
+                #Trocar a posição de "Histórico" e "Valor"
+                tabelas.insert(1,'Valor', tabelas.pop('Valor'))
+                tabelas.insert(2,'Histórico' ,tabelas.pop('Histórico'))
+
+                #Add espaços vazios
+                tabelas.insert(1,'Cód. Conta Débito','')
+                tabelas.insert(2,'Cód. Conta Crédito','')
+                tabelas.insert(4,'Cód. Histórico','')
+
+                coluna_inf =[]
+                #Tirar C e D de "Valor"
+                for index, row in tabelas.iterrows():
+                    if 'C' in row['Valor']:
+                        coluna_inf.append('C')
+                        tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
+                    elif 'D' in row['Valor']:
+                        coluna_inf.append('D')
+                        tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
+                
+                tabelas.insert(6,'Inf.',coluna_inf)
+
+                #Filtrando as linhas
                 tabelas.fillna(0.0, inplace=True)
-                tabelas.columns = ["Data Mov.", "Nr. Doc.", "Histórico",'', "Valor"]
                 lista_tabelas.append(tabelas.loc[tabelas['Histórico'] != 0.0])
 
-                arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
+            arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
-                arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= ordem.get())
+            arquivoFinal = arquivoFinal.sort_values('Data Mov.', ascending= ordem.get())
 
         elif banco.get() == 'Banco do Brasil':
             lista_tabelas = []
@@ -153,7 +187,7 @@ class application:
 
             file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
 
-            arquivoFinal.to_excel(file+'.xlsx')
+            arquivoFinal.style.hide().to_excel(file+'.xlsx')
 
             messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
 
