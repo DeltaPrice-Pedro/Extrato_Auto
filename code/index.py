@@ -81,7 +81,7 @@ class App:
         
         self.bancoEntry = StringVar(self.index)
 
-        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Santa Fé','Sicob')
+        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Santa Fé','Sicoob')
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -193,49 +193,49 @@ class App:
 
             arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem.get())
 
-        elif banco.get() == 'Sicob':
+        elif banco.get() == 'Sicoob':
             lista_tabelas = []
             coluna_inf = []
 
-            for tabelas in arquivo:
-                #Filtrando as colunas
-                tabelas.columns = ["Data", "", "Histórico", "Valor"]
-                tabelas = tabelas.drop('', axis=1)
+            tabelas = arquivo
+            tabelas = tabelas.drop('', axis=1)
 
-                #Trocar a posição de "Histórico" e "Valor"
-                tabelas.insert(1,'Valor', tabelas.pop('Valor'))
-                tabelas.insert(2,'Histórico' ,tabelas.pop('Histórico'))
+            #Trocar a posição de "Histórico" e "Valor"
+            tabelas.insert(1,'Valor', tabelas.pop('Valor'))
+            tabelas.insert(2,'Histórico' ,tabelas.pop('Histórico'))
 
-                #Add espaços vazios
-                tabelas.insert(1,'Cód. Conta Débito','')
-                tabelas.insert(2,'Cód. Conta Crédito','')
-                tabelas.insert(4,'Cód. Histórico','')
+            #Add espaços vazios
+            tabelas.insert(1,'Cód. Conta Débito','')
+            tabelas.insert(2,'Cód. Conta Crédito','')
+            tabelas.insert(4,'Cód. Histórico','')
 
-                #Tirar C e D de "Valor"
-                for index, row in tabelas.iterrows():
-                    if 'C' in str(row['Valor']):
-                        coluna_inf.append('C')
-                        tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
-                    elif 'D' in str(row['Valor']):
-                        coluna_inf.append('D')
-                        tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
+            #Tirar C e D de "Valor"
+            for index, row in tabelas.iterrows():
+                if 'C' in str(row['Valor']):
+                    coluna_inf.append('C')
+                    tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
+                elif 'D' in str(row['Valor']):
+                    coluna_inf.append('D')
+                    tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
+                else:
+                    coluna_inf.append('')
+
+            tabelas.insert(6,'Inf.',coluna_inf)
+
+            #Filtrando as linhas
+            tabelas.fillna('', inplace=True)
+            for index, row in tabelas.iterrows():
+                if row['Data'] == '' and 'SALDO DO DIA ===== >' not in row['Histórico']:
+                    linhaAcima = tabelas.iloc[index - 1]
+                    linhaAbaixo = tabelas.iloc[index + 1]
+                    if linhaAbaixo['Histórico'] != '':
+                        tabelas.loc[[index - 1],['Histórico']] = str(linhaAcima['Histórico']) + ' ' + str(row['Histórico'])
+                        tabelas.drop(index)
                     else:
-                        coluna_inf.append('')
-                
-                tabelas.insert(6,'Inf.',coluna_inf)
+                        tabelas.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' ' + str(row['Histórico'])
+                        tabelas.drop(index)
 
-                #Filtrando as linhas
-                tabelas.fillna('', inplace=True)
-                for index, row in tabelas.iterrows():
-                    if row['Data'] == '' and 'SALDO DO DIA ===== >' not in row['Histórico']:
-                        linhaAcima = tabelas.iloc[index - 1]
-                        if linhaAcima['Data'] != '':
-                            tabelas.loc[[index - 1],['Histórico']] = str(linhaAcima['Histórico']) + ' ' + str(row['Histórico'])
-                        else:
-                            linhaAbaixo = tabelas.iloc[index + 1]
-                            tabelas.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' ' + str(row['Histórico'])
-
-                lista_tabelas.append(tabelas.loc[tabelas['Data'] != ''])
+            lista_tabelas.append(tabelas.loc[tabelas['Data'] != ''])
 
             arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
@@ -257,7 +257,18 @@ class App:
             arquivoFinal = ''
 
             if tipo == 'pdf':
-                arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
+                if banco.get() == 'Sicoob':
+                    tabela1 = tb.read_pdf(arquivo, stream= True,relative_area=True ,area=[13,0,100,100])
+                    tabela2 = tb.read_pdf(arquivo, stream= True, pages= 'all')
+
+                    tabela2.insert(0,tabela1[0])
+                    #Filtrando as colunas
+                    for tabelas in tabela2:
+                        tabelas.columns = ["Data", "", "Histórico", "Valor"]
+
+                    arquivoLido = pd.concat(tabela2, ignore_index=True)
+                else:
+                    arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
                 
             elif tipo == 'lsx':
                 arquivoLido = pd.read_excel(arquivo)
