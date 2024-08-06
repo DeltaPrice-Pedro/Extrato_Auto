@@ -239,7 +239,7 @@ class App:
 
             arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
-            arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem.get())
+            arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem.get(), ignore_index=True)
         else:
             return None
         
