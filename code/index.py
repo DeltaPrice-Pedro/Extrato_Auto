@@ -34,9 +34,7 @@ class App:
         self.window.configure(background='darkblue')
         self.window.resizable(False,False)
         self.window.geometry('860x500')
-        # self.window.minsize(width=860, height=500)
-        # self.window.maxsize(width=860, height=500)
-        self.window.iconbitmap('')
+        self.window.iconbitmap('./code/imgs/delta-icon.ico')
         self.window.title('Conversor de Extrato')
 
     def index(self):
@@ -44,40 +42,48 @@ class App:
         self.index.place(relx=0.05,rely=0.05,relwidth=0.9,relheight=0.9)
 
         #Titulo
-        Label(self.index, text='Conversor de Extrato', background='lightblue', font=('Bold', 17))\
-            .place(relx=0.35,rely=0.05)
+        Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.2,relheight=0.15)
+
+        #Logo
+        self.logo = PhotoImage(file='./code/imgs/deltaprice-hori.png')
+        
+        self.logo = self.logo.subsample(4,4)
+        
+        Label(self.window, image=self.logo, background='lightblue')\
+            .place(relx=0.175,rely=0.05,relwidth=0.7,relheight=0.2)
+
 
         #Labels e Entrys
         ###########Arquivo
         Label(self.index, text='Insira aqui o arquivo:',\
             background='lightblue', font=(10))\
-                .place(relx=0.15,rely=0.3)
+                .place(relx=0.15,rely=0.4)
 
         self.nome_arq = ''
         self.arqLabel = Label(self.index)
         self.arqLabel.config(font=("Arial", 8, 'bold italic'))
-        self.arqLabel.place(relx=0.21,rely=0.37,relwidth=0.35, relheight=0.055)
+        self.arqLabel.place(relx=0.21,rely=0.47,relwidth=0.35, relheight=0.055)
         
         Button(self.index, text='Enviar',\
             command= lambda: self.inserir_arq())\
-                .place(relx=0.15,rely=0.37,relwidth=0.06,relheight=0.055)
+                .place(relx=0.15,rely=0.47,relwidth=0.06,relheight=0.055)
         
         Label(self.index, text='Ordem da coluna de "Datas":',\
             background='lightblue', font=(10))\
-                .place(relx=0.15,rely=0.5)
+                .place(relx=0.15,rely=0.6)
         
         self.rdButton = BooleanVar()
 
         self.rdButton.set(True)
 
-        Radiobutton(self.index, text='Crescente', value=True, variable=self.rdButton).place(relx=0.15,rely=0.57,relwidth=0.2,relheight=0.04)
+        Radiobutton(self.index, text='Crescente', value=True, variable=self.rdButton).place(relx=0.15,rely=0.67,relwidth=0.2,relheight=0.04)
 
-        Radiobutton(self.index, text='Decrescente', value=False,variable=self.rdButton).place(relx=0.31,rely=0.57,relwidth=0.2,relheight=0.04)
+        Radiobutton(self.index, text='Decrescente', value=False,variable=self.rdButton).place(relx=0.31,rely=0.67,relwidth=0.2,relheight=0.04)
 
         ###########Banco
         Label(self.index, text='Escolha o banco emissor:',\
             background='lightblue', font=(10))\
-                .place(relx=0.6,rely=0.3)
+                .place(relx=0.6,rely=0.4)
         
         self.bancoEntry = StringVar(self.index)
 
@@ -86,7 +92,7 @@ class App:
         self.bancoEntry.set('Escolha aqui')
 
         self.popup = OptionMenu(self.index, self.bancoEntry, *self.bancoEntryOpt)\
-            .place(relx=0.6,rely=0.37,relwidth=0.2,relheight=0.06)
+            .place(relx=0.6,rely=0.47,relwidth=0.2,relheight=0.06)
         
         #Botão enviar
         Button(self.index, text='Gerar Extrato',\
