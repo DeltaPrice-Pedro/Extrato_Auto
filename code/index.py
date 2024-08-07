@@ -81,7 +81,7 @@ class App:
         
         self.bancoEntry = StringVar(self.index)
 
-        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Santa Fé','Sicoob')
+        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Santa Fé','Sicoob', 'Inter')
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -101,6 +101,14 @@ class App:
     def definir_tipo(self, arquivo):
         tamanho = len(arquivo)
         return arquivo[tamanho-3 : tamanho]
+    
+    def buscarLinhaPai(self,index, tabela):
+        linhaAcima = tabela.iloc[index]
+        if linhaAcima['Data'] != '':
+            #se tiver data, é a linha pai
+            return index
+        #senao retorna a função com Index -1
+        return self.buscarLinhaPai(index - 1, tabela)
 
     def custom_banco(self, arquivo, banco, ordem):
         if banco.get() == 'Caixa':
@@ -226,20 +234,66 @@ class App:
             tabelas.fillna('', inplace=True)
             for index, row in tabelas.iterrows():
                 if row['Data'] == '' and 'SALDO DO DIA ===== >' not in row['Histórico']:
-                    linhaAcima = tabelas.iloc[index - 1]
                     linhaAbaixo = tabelas.iloc[index + 1]
                     if linhaAbaixo['Histórico'] != '':
-                        tabelas.loc[[index - 1],['Histórico']] = str(linhaAcima['Histórico']) + ' ' + str(row['Histórico'])
-                        tabelas.drop(index)
+                        indexPai = self.buscarLinhaPai(index - 1, tabelas)
+                        linhaPai = tabelas.iloc[indexPai]
+                        tabelas.loc[[indexPai], ['Histórico']] = str(linhaPai['Histórico']) + ' - ' + str(row['Histórico'])
                     else:
-                        tabelas.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' ' + str(row['Histórico'])
-                        tabelas.drop(index)
+                        tabelas.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' - ' + str(row['Histórico'])
 
             lista_tabelas.append(tabelas.loc[tabelas['Data'] != ''])
 
             arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
 
             arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem.get(), ignore_index=True)
+        
+        elif banco.get() == 'Inter':
+            lista_tabelas = []
+            coluna_inf = []
+            coluna_data = []
+            data = ''
+
+            tabelas = arquivo
+
+            
+
+            #Trocar a posição de "Histórico" e "Valor"
+            tabelas.insert(1,'Histórico', tabelas.pop('Data'))
+
+            #Add espaços vazios
+            tabelas.insert(0,'Cód. Conta Débito','')
+            tabelas.insert(1,'Cód. Conta Crédito','')
+            tabelas.insert(3,'Cód. Histórico','')
+
+            tabelas = tabelas.drop([0,1,2,3,4]).reset_index(drop=True)
+
+            #Tirar "-" de "Valor"
+            for index, row in tabelas.iterrows():
+                if '-' in str(row['Valor']):
+                    coluna_inf.append('D')
+                    tabelas.loc[[index],['Valor']] = str(row['Valor']).replace('-','')
+                else:
+                    coluna_inf.append('C')
+
+            tabelas.insert(5,'Inf.',coluna_inf)
+
+            #Adcionar coluna data
+            tabelas.fillna('', inplace=True)
+            for index, row in tabelas.iterrows():
+                if str(row['Histórico'][0]).isdigit():
+                    pos_saldo = str(row['Histórico']).index('Saldo') 
+                    data = str(row['Histórico'][:pos_saldo - 1])
+                    coluna_data.append('')
+                else:
+                    coluna_data.append(data)
+
+            tabelas.insert(0,'Data',coluna_data)
+
+            lista_tabelas.append(tabelas.loc[tabelas['Data'] != ''])
+
+            arquivoFinal = pd.concat(lista_tabelas, ignore_index=True)
+
         else:
             return None
         
@@ -267,6 +321,16 @@ class App:
                         tabelas.columns = ["Data", "", "Histórico", "Valor"]
 
                     arquivoLido = pd.concat(tabela2, ignore_index=True)
+                elif banco.get() == 'Inter':
+                    arquivor = tb.read_pdf(arquivo, pages='all', stream= True,\
+                        relative_area=True, area=[0,0,93,77])
+                    
+                    #Filtrando as colunas
+                    for tabelas in arquivor:
+                        tabelas.columns = ["Data","Valor"]
+
+                    arquivoLido = pd.concat(arquivor, ignore_index=True)
+                    
                 else:
                     arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
                 
@@ -293,7 +357,7 @@ class App:
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
         except subprocess.CalledProcessError:
-            messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela")
+            messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela, problema com o Java")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
 
