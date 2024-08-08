@@ -34,7 +34,7 @@ class App:
         self.window.configure(background='darkblue')
         self.window.resizable(False,False)
         self.window.geometry('860x500')
-        self.window.iconbitmap('./code/imgs/delta-icon.ico')
+        self.window.iconbitmap('C:/Users/DELTAASUS/Documents/GitHub/Extrato_Auto/code/imgs/delta-icon.ico')
         self.window.title('Conversor de Extrato')
 
     def index(self):
@@ -45,7 +45,7 @@ class App:
         Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.2,relheight=0.15)
 
         #Logo
-        self.logo = PhotoImage(file='./code/imgs/deltaprice-hori.png')
+        self.logo = PhotoImage(file='C:/Users/DELTAASUS/Documents/GitHub/Extrato_Auto/code/imgs/deltaprice-hori.png')
         
         self.logo = self.logo.subsample(4,4)
         
