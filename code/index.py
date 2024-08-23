@@ -9,17 +9,97 @@ import os
 window = Tk()
 
 class Arquivo:
-    ...
     #Cada arquivo possui um banco
+    def __init__(self):
+        self.caminho = ''
+
+    def leitura_simples(self):
+        return tb.read_pdf(self.caminho, pages='all', stream=True)
+
+    def leitura_custom(self, area_lida):
+        return tb.read_pdf(self.caminho, pages='all', stream= True,\
+                        relative_area=True, area= area_lida)
+
+    def leitura_excel(self):
+        return pd.read_excel(self.caminho)
+
+    def inserir(self, label):
+        self.caminho = askopenfilename()
+        self.__definir_tipo(self.caminho)
+
+        #def mudarLabel(self, label):
+        ultima_barra = self.caminho.rfind('/')
+        label['text'] = self.caminho[ultima_barra+1:]
+
+    def abrir(arquivo_final):
+        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
+
+        arquivo_final.style.hide().to_excel(file+'.xlsx')
+
+        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+
+        os.startfile(file+'.xlsx')
+
+    def __definir_tipo(self, arquivo):
+        tipo = arquivo[ len(arquivo) -3 :]
+
+        if tipo not in ['pdf', 'xlx']:
+            raise Exception('Formato de arquivo inválido')
+        
+        return tipo
 
 class Banco:
-    ...
-    def ler_tabela(self): #abstrato
+    def __init__(self):
+        self.arquivo = Arquivo()
+        self.formatos_disp = []
+
+    def gerar_extrato(self):
+        self.ler_tabela()
         ...
     #Cada banco possui uma lógica de transformação
 
-class Banco_caixa:
-    ...
+class Caixa(Banco):
+    def __init__(self):
+     super().__self__()
+
+    def to_string():
+        return 'Caixa'
+
+class BancoDoBrasil(Banco):
+    def __init__(self):
+     super().__self__()
+
+    def to_string():
+        return 'Banco do Brasil'
+
+class SantaFe(Banco):
+    def __init__(self):
+     super().__self__()
+
+    def to_string():
+        return 'Santa Fé'
+
+class Sicoob(Banco):
+    def __init__(self):
+     super().__self__()
+
+    def buscarLinhaPai(self,index, tabela):
+        linhaAcima = tabela.iloc[index]
+        if linhaAcima['Data'] != '':
+            #se tiver data, é a linha pai
+            return index
+        #senao retorna a função com Index -1
+        return self.buscarLinhaPai(index - 1, tabela)
+
+    def to_string():
+        return 'Sicoob'
+
+class Inter(Banco):
+    def __init__(self):
+     super().__self__()
+
+    def to_string():
+        return 'Inter'
 
 class App:
     #arquivo = Arquivo
@@ -67,18 +147,6 @@ class App:
         Button(self.index, text='Enviar',\
             command= lambda: self.inserir_arq())\
                 .place(relx=0.15,rely=0.47,relwidth=0.06,relheight=0.055)
-        
-        Label(self.index, text='Ordem da coluna de "Datas":',\
-            background='lightblue', font=(10))\
-                .place(relx=0.15,rely=0.6)
-        
-        self.rdButton = BooleanVar()
-
-        self.rdButton.set(True)
-
-        Radiobutton(self.index, text='Crescente', value=True, variable=self.rdButton).place(relx=0.15,rely=0.67,relwidth=0.2,relheight=0.04)
-
-        Radiobutton(self.index, text='Decrescente', value=False,variable=self.rdButton).place(relx=0.31,rely=0.67,relwidth=0.2,relheight=0.04)
 
         ###########Banco
         Label(self.index, text='Escolha o banco emissor:',\
@@ -99,23 +167,27 @@ class App:
             command= lambda: self.ler_arq(self.nome_arq,self.bancoEntry, self.rdButton))\
                 .place(relx=0.35,rely=0.8,relwidth=0.35,relheight=0.12)
         
-    def inserir_arq(self):
-        self.nome_arq = askopenfilename()
-        ultima_barra = self.nome_arq.rfind('/')
-        self.arqLabel['text'] = self.nome_arq[ultima_barra+1:]
-
-    def definir_tipo(self, arquivo):
-        tamanho = len(arquivo)
-        return arquivo[tamanho-3 : tamanho]
-    
-    def buscarLinhaPai(self,index, tabela):
-        linhaAcima = tabela.iloc[index]
-        if linhaAcima['Data'] != '':
-            #se tiver data, é a linha pai
-            return index
-        #senao retorna a função com Index -1
-        return self.buscarLinhaPai(index - 1, tabela)
-
+    def executar(self):
+        try:
+            if self.caminho == '':
+                raise Exception('Insira um arquivo')
+            
+            if self.bancoEntry.get() == 'Escolha aqui':
+                raise Exception('Banco inválido, favor selecioná-lo')
+            
+            banco = self.definir_banco()
+         
+        except ValueError:
+            messagebox.showerror(title='Aviso', message= 'Operação cancelada')
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except subprocess.CalledProcessError:
+            messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela, problema com o Java")
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error)
+       
     def custom_banco(self, arquivo, banco, ordem):
         if banco.get() == 'Caixa':
             lista_tabelas = []
@@ -304,67 +376,5 @@ class App:
             return None
         
         return arquivoFinal
-
-    def ler_arq(self, arquivo, banco, ordem):
-        try:
-            if arquivo == '':
-                raise Exception('Insira um arquivo')
-            
-            if banco.get() == 'Escolha aqui':
-                raise Exception('Banco inválido, favor selecioná-lo')
-            
-            tipo = self.definir_tipo(arquivo)
-            arquivoFinal = ''
-
-            if tipo == 'pdf':
-                if banco.get() == 'Sicoob':
-                    tabela1 = tb.read_pdf(arquivo, stream= True,relative_area=True ,area=[13,0,100,100])
-                    tabela2 = tb.read_pdf(arquivo, stream= True, pages= 'all')
-
-                    tabela2.insert(0,tabela1[0])
-                    #Filtrando as colunas
-                    for tabelas in tabela2:
-                        tabelas.columns = ["Data", "", "Histórico", "Valor"]
-
-                    arquivoLido = pd.concat(tabela2, ignore_index=True)
-                elif banco.get() == 'Inter':
-                    arquivor = tb.read_pdf(arquivo, pages='all', stream= True,\
-                        relative_area=True, area=[0,0,93,77])
-                    
-                    #Filtrando as colunas
-                    for tabelas in arquivor:
-                        tabelas.columns = ["Data","Valor"]
-
-                    arquivoLido = pd.concat(arquivor, ignore_index=True)
-                    
-                else:
-                    arquivoLido = tb.read_pdf(arquivo, pages='all', stream=True)
-                
-            elif tipo == 'lsx':
-                arquivoLido = pd.read_excel(arquivo)
-            else:
-                raise Exception('Formato de arquivo inválido')
-
-            arquivoFinal = self.custom_banco(arquivoLido, banco, ordem)
-
-            file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
-
-            arquivoFinal.style.hide().to_excel(file+'.xlsx')
-
-            messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-
-            os.startfile(file+'.xlsx')
-
-
-        except ValueError:
-            messagebox.showerror(title='Aviso', message= 'Operação cancelada')
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela, problema com o Java")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
 
 App()
