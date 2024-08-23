@@ -1,2 +1,5 @@
 /venv
-.xlsx
+/build
+/dist
+*.spec
+*.xlsx
