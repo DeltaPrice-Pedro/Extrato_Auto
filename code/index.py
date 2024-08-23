@@ -50,6 +50,7 @@ class Arquivo:
 class Banco:
     def __init__(self):
         self.formatos_disp = []
+        self.titulo = ''
 
     def inserir_espacos(self):
         #Trocar a posição de "Histórico" e "Valor"
@@ -63,11 +64,14 @@ class Banco:
 
     #talvez todos os bancos usam o for de filt_colunas
 
-    #Cada banco possui uma lógica de transformação
+    def to_string(self):
+        return self.titulo
+    #Cada banco possui uma gerar_extrato próprio!!
 
 class Caixa(Banco):
     def __init__(self):
         super().__init__()
+        self.titulo = 'Caixa'
 
     def gerar_extrato(self, arquivo):
         self.__filt_colunas(arquivo.leitura_simples())
@@ -105,26 +109,20 @@ class Caixa(Banco):
 
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
-    def to_string():
-        return 'Caixa'
-
 class BancoDoBrasil(Banco):
     def __init__(self):
-     super().__init__()
-
-    def to_string():
-        return 'Banco do Brasil'
+        super().__init__()
+        self.titulo = 'Banco do Brasil'
 
 class SantaFe(Banco):
     def __init__(self):
-     super().__init__()
-
-    def to_string():
-        return 'Santa Fé'
+        super().__init__()
+        self.titulo = 'Santa Fé'
 
 class Sicoob(Banco):
     def __init__(self):
      super().__init__()
+     self.titulo = 'Sicoob'
 
     def buscarLinhaPai(self,index, tabela):
         linhaAcima = tabela.iloc[index]
@@ -134,15 +132,10 @@ class Sicoob(Banco):
         #senao retorna a função com Index -1
         return self.buscarLinhaPai(index - 1, tabela)
 
-    def to_string():
-        return 'Sicoob'
-
 class Inter(Banco):
     def __init__(self):
-     super().__self__()
-
-    def to_string():
-        return 'Inter'
+        super().__self__()
+        self.titulo = 'Inter'
 
 class App:
     #arquivo = Arquivo
