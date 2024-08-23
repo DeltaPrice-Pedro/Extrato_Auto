@@ -34,7 +34,7 @@ class App:
         self.window.configure(background='darkblue')
         self.window.resizable(False,False)
         self.window.geometry('860x500')
-        self.window.iconbitmap('C:/Users/DELTAASUS/Documents/GitHub/Extrato_Auto/code/imgs/delta-icon.ico')
+        self.window.iconbitmap('Z:\\18 - PROGRAMAS DELTA\\code\\imgs\\delta-icon.ico')
         self.window.title('Conversor de Extrato')
 
     def index(self):
@@ -45,7 +45,7 @@ class App:
         Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.2,relheight=0.15)
 
         #Logo
-        self.logo = PhotoImage(file='C:/Users/DELTAASUS/Documents/GitHub/Extrato_Auto/code/imgs/deltaprice-hori.png')
+        self.logo = PhotoImage(file='Z:\\18 - PROGRAMAS DELTA\\code\\imgs\\deltaprice-hori.png')
         
         self.logo = self.logo.subsample(4,4)
         
@@ -199,13 +199,29 @@ class App:
 
         elif banco.get() == 'Santa Fé':
             lista= ["Data", "Observação", "Data Balancete","Agência Origem","Lote","Num. Documento","Cod. Histórico","Histórico","Valor R$","Inf.","Detalhamento Hist."]
+
             arquivo = arquivo.rename(columns=dict(zip(arquivo.columns, lista)))
+            
+            #Juntar históricos
+            for index, row in arquivo.iterrows():
+                arquivo.loc[[index],['Histórico']] = str(row['Histórico']) + str(row["Detalhamento Hist."])
+
+            #Filtrando as colunas
+            arquivo = arquivo[["Data","Histórico","Valor R$","Inf."]]
+
             arquivo = arquivo.drop(0, axis=0)
             arquivo = arquivo.drop(1, axis=0)
 
-            arquivoFinal = arquivo[["Data", "Agência Origem","Histórico","Valor R$","Inf."]]
+            #Trocar a posição de "Histórico" e "Valor"
+            arquivo.insert(1,'Valor', arquivo.pop('Valor R$'))
+            arquivo.insert(2,'Histórico' ,arquivo.pop('Histórico'))
 
-            arquivoFinal = arquivoFinal.sort_values('Data', ascending= ordem.get())
+            #Add espaços vazios
+            arquivo.insert(1,'Cód. Conta Débito','')
+            arquivo.insert(2,'Cód. Conta Crédito','')
+            arquivo.insert(4,'Cód. Histórico','')
+
+            arquivoFinal = arquivo
 
         elif banco.get() == 'Sicoob':
             lista_tabelas = []
