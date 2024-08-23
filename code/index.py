@@ -25,13 +25,17 @@ class Arquivo:
 
     def inserir(self, label):
         self.caminho = askopenfilename()
-        self.__definir_tipo(self.caminho)
 
-        #def mudarLabel(self, label):
+        if self.caminho == '':
+            raise Exception('Operação cancelada')
+
+        if self.__tipo() not in ['pdf', 'xlx']:
+            raise Exception('Formato de arquivo inválido')
+        
         ultima_barra = self.caminho.rfind('/')
         label['text'] = self.caminho[ultima_barra+1:]
 
-    def abrir(arquivo_final):
+    def abrir(self,arquivo_final):
         file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
 
         arquivo_final.style.hide().to_excel(file+'.xlsx')
@@ -40,43 +44,12 @@ class Arquivo:
 
         os.startfile(file+'.xlsx')
 
-    def __definir_tipo(self, arquivo):
-        tipo = arquivo[ len(arquivo) -3 :]
-
-        if tipo not in ['pdf', 'xlx']:
-            raise Exception('Formato de arquivo inválido')
-        
-        return tipo
-
-    def is_null(self):
-        return self.caminho
+    def __tipo(self):
+        return self.caminho[ len(self.caminho) -3 :]
 
 class Banco:
     def __init__(self):
-        self.arquivo = Arquivo()
         self.formatos_disp = []
-
-    def gerar_extrato(self):
-        self.ler_tabela()
-        ...
-    #Cada banco possui uma lógica de transformação
-
-class Caixa(Banco):
-    def __init__(self):
-     super().__self__()
-
-    def gerar_extrato(self):
-        self.df = pd.concat(self.arquivo.leitura_simples(), ignore_index=True)
-        self.filt_colunas()
-        self.inserir_espacos()
-        self.col_inf()
-        self.filt_linhas()
-
-        return self.df
-    
-    def filt_colunas(self):
-        self.df.columns = ["Data Mov.", "", "Histórico",'', "Valor"]
-        self.df = self.df.drop('', axis=1)
 
     def inserir_espacos(self):
         #Trocar a posição de "Histórico" e "Valor"
@@ -88,7 +61,30 @@ class Caixa(Banco):
         self.df.insert(2,'Cód. Conta Crédito','')
         self.df.insert(4,'Cód. Histórico','')
 
-    def col_inf(self):
+    #talvez todos os bancos usam o for de filt_colunas
+
+    #Cada banco possui uma lógica de transformação
+
+class Caixa(Banco):
+    def __init__(self):
+        super().__init__()
+
+    def gerar_extrato(self, arquivo):
+        self.__filt_colunas(arquivo.leitura_simples())
+        self.inserir_espacos()
+        self.__col_inf()
+        self.__filt_linhas()
+
+        return self.df
+    
+    def __filt_colunas(self,arquivo):
+        for tabelas in arquivo:
+            tabelas.columns = ["Data Mov.", "", "Histórico",'', "Valor"]
+            
+        self.df = pd.concat(arquivo, ignore_index=True)
+        self.df = self.df.drop('', axis=1)
+
+    def __col_inf(self):
         coluna_inf =[]
         #Tirar C e D de "Valor"
         for index, row in self.df.iterrows():
@@ -101,7 +97,7 @@ class Caixa(Banco):
 
         self.df.insert(6,'Inf.',coluna_inf)
 
-    def filt_linhas(self):
+    def __filt_linhas(self):
         lista_tabelas = []
 
         self.df.fillna(0.0, inplace=True)
@@ -114,21 +110,21 @@ class Caixa(Banco):
 
 class BancoDoBrasil(Banco):
     def __init__(self):
-     super().__self__()
+     super().__init__()
 
     def to_string():
         return 'Banco do Brasil'
 
 class SantaFe(Banco):
     def __init__(self):
-     super().__self__()
+     super().__init__()
 
     def to_string():
         return 'Santa Fé'
 
 class Sicoob(Banco):
     def __init__(self):
-     super().__self__()
+     super().__init__()
 
     def buscarLinhaPai(self,index, tabela):
         linhaAcima = tabela.iloc[index]
@@ -200,9 +196,9 @@ class App:
             background='lightblue', font=(10))\
                 .place(relx=0.6,rely=0.4)
         
-        self.bancoEntry = StringVar(self.index)
+        self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ('Caixa','Banco do Brasil','Santa Fé','Sicoob', 'Inter')
+        self.bancoEntryOpt = ["Caixa","BancoDoBrasil","SantaFe","Sicoob", "Inter"]
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -211,18 +207,23 @@ class App:
         
         #Botão enviar
         Button(self.index, text='Gerar Extrato',\
-            command= lambda: self.ler_arq(self.nome_arq,self.bancoEntry, self.rdButton))\
+            command= lambda: self.executar())\
                 .place(relx=0.35,rely=0.8,relwidth=0.35,relheight=0.12)
-        
+
+    def definir_banco(self):
+        banco_selecionado = self.bancoEntry.get()
+
+        if banco_selecionado == 'Caixa':
+            return Caixa()
+        raise Exception('Banco inválido, favor selecioná-lo')
+
     def executar(self):
-        try:
-            if self.arquivo.is_null():
-                raise Exception('Insira um arquivo')
-            
-            if self.bancoEntry.get() == 'Escolha aqui':
-                raise Exception('Banco inválido, favor selecioná-lo')
-            
+        try:            
             banco = self.definir_banco()
+
+            arquivo_final = banco.gerar_extrato(self.arquivo)
+
+            self.arquivo.abrir(arquivo_final)
          
         except ValueError:
             messagebox.showerror(title='Aviso', message= 'Operação cancelada')
@@ -231,7 +232,9 @@ class App:
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
         except subprocess.CalledProcessError:
-            messagebox.showinfo(title='Aviso', message=f"Erro ao extrair a tabela, problema com o Java")
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, problema com o Java")
+        except FileNotFoundError:
+            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
        
