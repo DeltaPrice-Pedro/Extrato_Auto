@@ -13,11 +13,11 @@ class Arquivo:
     def __init__(self):
         self.caminho = ''
 
-    def leitura_simples(self):
-        return tb.read_pdf(self.caminho, pages='all', stream=True)
+    def leitura_simples(self, pg = 'all'):
+        return tb.read_pdf(self.caminho, pages= pg, stream=True)
 
-    def leitura_custom(self, area_lida):
-        return tb.read_pdf(self.caminho, pages='all', stream= True,\
+    def leitura_custom(self, area_lida, pg = 'all'):
+        return tb.read_pdf(self.caminho, pages= pg, stream= True,\
                         relative_area=True, area= area_lida)
 
     def leitura_excel(self):
@@ -29,7 +29,7 @@ class Arquivo:
         if self.caminho == '':
             raise Exception('Operação cancelada')
 
-        if self.__tipo() not in ['pdf', 'xlx']:
+        if self.__tipo() not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
         
         ultima_barra = self.caminho.rfind('/')
@@ -52,9 +52,9 @@ class Banco:
         self.formatos_disp = []
         self.titulo = ''
 
-    def inserir_espacos(self):
+    def inserir_espacos(self, valor = 'Valor'):
         #Trocar a posição de "Histórico" e "Valor"
-        self.df.insert(1,'Valor', self.df.pop('Valor'))
+        self.df.insert(1,'Valor', self.df.pop(valor))
         self.df.insert(2,'Histórico' ,self.df.pop('Histórico'))
 
         #Add espaços vazios
@@ -114,10 +114,70 @@ class BancoDoBrasil(Banco):
         super().__init__()
         self.titulo = 'Banco do Brasil'
 
+    def gerar_extrato(self, arquivo):
+        self.__filt_colunas(arquivo.leitura_simples())
+        self.inserir_espacos(valor= 'Valor R$')
+        self.__col_inf()
+        self.__filt_linhas()
+
+        return self.df
+    
+    def __filt_colunas(self,arquivo):
+        for tabelas in arquivo:
+            tabelas.columns = ["balancete","","","","Histórico","","Valor R$",""]
+            
+        self.df = pd.concat(arquivo, ignore_index=True)
+        self.df = self.df.drop('', axis=1)
+
+    def __col_inf(self): #identico ao Caixa
+        coluna_inf =[]
+        #Tirar C e D de "Valor"
+        for index, row in self.df.iterrows():
+            if 'C' in str(row['Valor']):
+                coluna_inf.append('C')
+                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
+            elif 'D' in str(row['Valor']):
+                coluna_inf.append('D')
+                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
+            else:
+                coluna_inf.append('')
+
+        self.df.insert(6,'Inf.',coluna_inf)
+
+    def __filt_linhas(self):
+        lista_tabelas = []
+        self.df.fillna(0.0, inplace=True)
+        for index, row in self.df.iterrows():
+            if row['balancete'] == 0.0:
+                linhaAcima = self.df.iloc[index - 1]
+                self.df.loc[[index - 1],['Histórico']] = linhaAcima['Histórico']+ ': ' + row['Histórico']
+
+        lista_tabelas.append(self.df.loc[self.df['Valor'] != 0.0])
+
+        self.df = pd.concat(lista_tabelas, ignore_index=True)
+
 class SantaFe(Banco):
     def __init__(self):
         super().__init__()
         self.titulo = 'Santa Fé'
+
+    def gerar_extrato(self, arquivo):
+        self.__filt_colunas(arquivo.leitura_excel())
+        self.inserir_espacos(valor= 'Valor R$')
+
+        return self.df
+
+    def __filt_colunas(self,arquivo):
+        lista= ["Data", "Observação", "Data Balancete","Agência Origem","Lote","Num. Documento","Cod. Histórico","Histórico","Valor R$","Inf.","Detalhamento Hist."]
+        self.df = arquivo.rename(columns=dict(zip(arquivo.columns, lista)))
+        #Juntar históricos
+        for index, row in self.df.iterrows():
+            self.df.loc[[index],['Histórico']] = str(row['Histórico']) + str(row["Detalhamento Hist."])
+
+        #Filtrando as colunas
+        self.df = self.df[["Data","Histórico","Valor R$","Inf."]]
+
+        self.df = self.df.drop([0,1,2,len(self.df)-1]).reset_index(drop=True)
 
 class Sicoob(Banco):
     def __init__(self):
@@ -191,7 +251,7 @@ class App:
         
         self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ["Caixa","BancoDoBrasil","SantaFe","Sicoob", "Inter"]
+        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter"]
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -208,27 +268,31 @@ class App:
 
         if banco_selecionado == 'Caixa':
             return Caixa()
+        elif banco_selecionado == 'Banco do Brasil':
+            return BancoDoBrasil()
+        elif banco_selecionado == 'Santa Fé':
+            return SantaFe()
         raise Exception('Banco inválido, favor selecioná-lo')
 
     def executar(self):
-        try:            
+        # try:            
             banco = self.definir_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        except ValueError:
-            messagebox.showerror(title='Aviso', message= 'Operação cancelada')
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, problema com o Java")
-        except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
+        # except ValueError:
+        #     messagebox.showerror(title='Aviso', message= 'Operação cancelada')
+        # except PermissionError:
+        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        # except UnboundLocalError:
+        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        # except subprocess.CalledProcessError:
+        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, problema com o Java")
+        # except FileNotFoundError:
+        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        # except Exception as error:
+        #     messagebox.showerror(title='Aviso', message= error)
        
 App()

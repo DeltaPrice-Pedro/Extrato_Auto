@@ -6,3 +6,8 @@
 - Layout mais bonito e agradável
 
 >> Foque primeiramente na funcionalidade, para só então, otimizar processos e estéticas
+
+# Modularizações
+
+- Juntar ou fazer assimiliar processos de diferentes bancos na classe Banco
+- 
