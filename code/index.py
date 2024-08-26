@@ -327,7 +327,7 @@ class App:
         self.index.place(relx=0.05,rely=0.05,relwidth=0.9,relheight=0.9)
 
         #Titulo
-        Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.2,relheight=0.15)
+        Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.25,relheight=0.15)
 
         #Logo
         self.logo = PhotoImage(file='Z:\\18 - PROGRAMAS DELTA\\code\\imgs\\deltaprice-hori.png')
@@ -335,27 +335,31 @@ class App:
         self.logo = self.logo.subsample(4,4)
         
         Label(self.window, image=self.logo, background='lightblue')\
-            .place(relx=0.175,rely=0.05,relwidth=0.7,relheight=0.2)
+            .place(relx=0.175,rely=0.1,relwidth=0.7,relheight=0.2)
 
         #Labels e Entrys
         ###########Arquivo
         Label(self.index, text='Insira aqui o arquivo:',\
             background='lightblue', font=(10))\
-                .place(relx=0.15,rely=0.4)
+                .place(relx=0.15,rely=0.45)
 
         self.nome_arq = ''
         self.arqLabel = Label(self.index)
         self.arqLabel.config(font=("Arial", 8, 'bold italic'))
-        self.arqLabel.place(relx=0.21,rely=0.47,relwidth=0.35, relheight=0.055)
+        self.arqLabel.place(relx=0.21,rely=0.52,relwidth=0.7, relheight=0.055)
         
         Button(self.index, text='Enviar',\
             command= lambda: self.arquivo.inserir(self.arqLabel))\
-                .place(relx=0.15,rely=0.47,relwidth=0.06,relheight=0.055)
+                .place(relx=0.15,rely=0.52,relwidth=0.06,relheight=0.055)
 
         ###########Banco
+        Label(self.index, text='Caso o nome do banco não constar no nome do arquivo',\
+                    background='lightblue', font=("Arial", 12, 'bold italic'))\
+                        .place(relx=0.15,rely=0.7)
+
         Label(self.index, text='Escolha o banco emissor:',\
             background='lightblue', font=(10))\
-                .place(relx=0.6,rely=0.4)
+                .place(relx=0.15,rely=0.75)
         
         self.bancoEntry = StringVar()
 
@@ -364,30 +368,38 @@ class App:
         self.bancoEntry.set('Escolha aqui')
 
         self.popup = OptionMenu(self.index, self.bancoEntry, *self.bancoEntryOpt)\
-            .place(relx=0.6,rely=0.47,relwidth=0.2,relheight=0.06)
+            .place(relx=0.4,rely=0.75,relwidth=0.2,relheight=0.06)
         
         #Botão enviar
         Button(self.index, text='Gerar Extrato',\
             command= lambda: self.executar())\
-                .place(relx=0.35,rely=0.8,relwidth=0.35,relheight=0.12)
+                .place(relx=0.65,rely=0.8,relwidth=0.25,relheight=0.12)
 
     def definir_banco(self):
         banco_selecionado = self.bancoEntry.get()
+        nome_arq = self.arqLabel['text']
 
-        if banco_selecionado == 'Caixa':
+        if banco_selecionado == 'Caixa' or\
+            'caixa' in nome_arq.lower():
             return Caixa()
-        elif banco_selecionado == 'Banco do Brasil':
-            return BancoDoBrasil()
-        elif banco_selecionado == 'Santa Fé':
+        elif banco_selecionado == 'Santa Fé' or\
+            'santa fé' in nome_arq.lower() or\
+            'santa fe' in nome_arq.lower():
             return SantaFe()
-        elif banco_selecionado == 'Sicoob':
+        elif banco_selecionado == 'Banco do Brasil' or\
+            'BB' in nome_arq.upper() or\
+            'banco do brasil' in nome_arq.lower():
+            return BancoDoBrasil()
+        elif banco_selecionado == 'Sicoob' or\
+            'sicoob' in nome_arq.lower():
             return Sicoob()
-        elif banco_selecionado == 'Inter':
+        elif banco_selecionado == 'Inter' or\
+            'inter' in nome_arq.lower():
             return Inter()
         raise Exception('Banco inválido, favor selecioná-lo')
 
     def executar(self):
-        try:            
+        try:       
             banco = self.definir_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
