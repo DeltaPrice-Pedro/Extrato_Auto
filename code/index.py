@@ -52,6 +52,13 @@ class Banco:
         self.formatos_disp = []
         self.titulo = ''
 
+    def filt_colunas(self,arquivo, colunas):
+        for tabelas in arquivo:
+            tabelas.columns = colunas
+            
+        self.df = pd.concat(arquivo, ignore_index=True)
+        self.df = self.df.drop('', axis=1, errors='ignore')
+
     def inserir_espacos(self, valor = 'Valor'):
         #Trocar a posição de "Histórico" e "Valor"
         self.df.insert(1,'Valor', self.df.pop(valor))
@@ -62,7 +69,20 @@ class Banco:
         self.df.insert(2,'Cód. Conta Crédito','')
         self.df.insert(4,'Cód. Histórico','')
 
-    #talvez todos os bancos usam o for de filt_colunas
+    def col_inf(self):
+        coluna_inf =[]
+        #Tirar C e D de "Valor"
+        for index, row in self.df.iterrows():
+            if 'C' in str(row['Valor']):
+                coluna_inf.append('C')
+                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
+            elif 'D' in str(row['Valor']):
+                coluna_inf.append('D')
+                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
+            else:
+                coluna_inf.append('')
+
+        self.df.insert(6,'Inf.',coluna_inf)
 
     def to_string(self):
         return self.titulo
@@ -74,42 +94,12 @@ class Caixa(Banco):
         self.titulo = 'Caixa'
 
     def gerar_extrato(self, arquivo):
-        self.__filt_colunas(arquivo.leitura_simples())
+        self.filt_colunas(arquivo.leitura_simples(),["Data Mov.", "", "Histórico",'', "Valor"])
         self.inserir_espacos()
-        self.__col_inf()
-        self.__filt_linhas()
-
-        return self.df
-    
-    def __filt_colunas(self,arquivo):
-        for tabelas in arquivo:
-            tabelas.columns = ["Data Mov.", "", "Histórico",'', "Valor"]
-            
-        self.df = pd.concat(arquivo, ignore_index=True)
-        self.df = self.df.drop('', axis=1)
-
-    def __col_inf(self):
-        coluna_inf =[]
-        #Tirar C e D de "Valor"
-        for index, row in self.df.iterrows():
-            if 'C' in str(row['Valor']):
-                coluna_inf.append('C')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
-            elif 'D' in str(row['Valor']):
-                coluna_inf.append('D')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
-            else:
-                coluna_inf.append('')
-
-        self.df.insert(6,'Inf.',coluna_inf)
-
-    def __filt_linhas(self):
-        lista_tabelas = []
+        self.col_inf()
 
         self.df.fillna(0.0, inplace=True)
-        lista_tabelas.append(self.df.loc[self.df['Histórico'] != 0.0])
-
-        self.df = pd.concat(lista_tabelas, ignore_index=True)
+        return self.df.loc[self.df['Histórico'] != 0.0]
 
 class BancoDoBrasil(Banco):
     def __init__(self):
@@ -117,46 +107,21 @@ class BancoDoBrasil(Banco):
         self.titulo = 'Banco do Brasil'
 
     def gerar_extrato(self, arquivo):
-        self.__filt_colunas(arquivo.leitura_simples())
+        self.filt_colunas(arquivo.leitura_simples(),\
+            ["balancete","","","","Histórico","","Valor R$",""])
         self.inserir_espacos(valor= 'Valor R$')
-        self.__col_inf()
+        self.col_inf()
         self.__filt_linhas()
 
-        return self.df
-    
-    def __filt_colunas(self,arquivo):
-        for tabelas in arquivo:
-            tabelas.columns = ["balancete","","","","Histórico","","Valor R$",""]
-            
-        self.df = pd.concat(arquivo, ignore_index=True)
-        self.df = self.df.drop('', axis=1)
-
-    def __col_inf(self): #identico ao Caixa
-        coluna_inf =[]
-        #Tirar C e D de "Valor"
-        for index, row in self.df.iterrows():
-            if 'C' in str(row['Valor']):
-                coluna_inf.append('C')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
-            elif 'D' in str(row['Valor']):
-                coluna_inf.append('D')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
-            else:
-                coluna_inf.append('')
-
-        self.df.insert(6,'Inf.',coluna_inf)
+        return self.df.loc[self.df['Valor'] != 0.0]
 
     def __filt_linhas(self):
-        lista_tabelas = []
         self.df.fillna(0.0, inplace=True)
         for index, row in self.df.iterrows():
             if row['balancete'] == 0.0:
                 linhaAcima = self.df.iloc[index - 1]
                 self.df.loc[[index - 1],['Histórico']] = linhaAcima['Histórico']+ ': ' + row['Histórico']
 
-        lista_tabelas.append(self.df.loc[self.df['Valor'] != 0.0])
-
-        self.df = pd.concat(lista_tabelas, ignore_index=True)
 
 class SantaFe(Banco):
     def __init__(self):
@@ -198,34 +163,12 @@ class Sicoob(Banco):
         tabela1 = arquivo.leitura_custom(area_lida= [13,0,100,100], pg=1)
         tabela2 = arquivo.leitura_simples()
         tabela2.insert(0, tabela1[0])
-        self.__filt_colunas(tabela2)
+        self.filt_colunas(tabela2, ["Data", "", "Histórico", "Valor"])
         self.inserir_espacos()
-        self.__col_inf()
+        self.col_inf()
         self.__filt_linhas()
 
         return self.df
-    
-    def __filt_colunas(self,arquivo):
-        for tabelas in arquivo:
-            tabelas.columns = ["Data", "", "Histórico", "Valor"]
-            
-        self.df = pd.concat(arquivo, ignore_index=True)
-        self.df = self.df.drop('', axis=1)
-
-    def __col_inf(self):
-        coluna_inf =[]
-        #Tirar C e D de "Valor"
-        for index, row in self.df.iterrows():
-            if 'C' in str(row['Valor']):
-                coluna_inf.append('C')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('C','')
-            elif 'D' in str(row['Valor']):
-                coluna_inf.append('D')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('D','')
-            else:
-                coluna_inf.append('')
-
-        self.df.insert(6,'Inf.',coluna_inf)
 
     def __filt_linhas(self):
         lista_tabelas = []
@@ -250,7 +193,8 @@ class Inter(Banco):
         self.titulo = 'Inter'
 
     def gerar_extrato(self, arquivo):
-        self.__filt_colunas(arquivo.leitura_custom(area_lida= [0,0,93,77]))
+        self.filt_colunas(arquivo.leitura_custom(area_lida= [0,0,93,77]),\
+            ["Data", "Valor"])
         self.__inserir_espacos()
         self.__col_inf()
         self.__col_data()
@@ -260,12 +204,6 @@ class Inter(Banco):
         lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
 
         return pd.concat(lista_tabelas, ignore_index=True)
-    
-    def __filt_colunas(self,arquivo):
-        for tabelas in arquivo:
-            tabelas.columns = ["Data", "Valor"]
-            
-        self.df = pd.concat(arquivo, ignore_index=True)
 
     def __inserir_espacos(self):
         #Trocar a posição de "Histórico" e "Valor"
@@ -413,7 +351,7 @@ class App:
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
         except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, problema com o Java")
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
         except FileNotFoundError:
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
