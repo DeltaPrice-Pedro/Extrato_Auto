@@ -1,5 +1,5 @@
 /venv
-/build
-/dist
+build/*
+dist/*
 /index.spec
 /index.xlsx
