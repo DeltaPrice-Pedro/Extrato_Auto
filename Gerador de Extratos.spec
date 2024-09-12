@@ -5,7 +5,7 @@ a = Analysis(
     ['code\\index.py'],
     pathex=[],
     binaries=[],
-    datas=[('venv\\Lib\\site-packages\\tabula\\tabula-1.0.5-jar-with-dependencies.jar', 'tabula')],
+    datas=[('venv\\Lib\\site-packages\\tabula\\tabula-1.0.5-jar-with-dependencies.jar', 'tabula'), ('code\\imgs\\', 'imgs')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['code\\imgs\\delta-icon.ico'],
+    icon=['code\\imgs\\extr-icon.ico'],
 )

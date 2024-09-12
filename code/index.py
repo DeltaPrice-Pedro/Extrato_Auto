@@ -1,9 +1,10 @@
-from tkinter import *
-from tkinter import messagebox
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter import messagebox
+from tkinter import *
 import tabula as tb
 import pandas as pd
 import subprocess
+import sys
 import os
 
 window = Tk()
@@ -19,6 +20,11 @@ class Arquivo:
     def leitura_custom(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
                         relative_area=True, area= area_lida)
+    
+    def leitura_custom_pandas(self, area_lida, pg = 'all'):
+        return tb.read_pdf(self.caminho, pages= pg, stream= True,\
+                        relative_area=True, area= area_lida,\
+                            pandas_options={"header":None})
 
     def leitura_excel(self):
         return pd.read_excel(self.caminho)
@@ -193,8 +199,8 @@ class Inter(Banco):
         self.titulo = 'Inter'
 
     def gerar_extrato(self, arquivo):
-        self.filt_colunas(arquivo.leitura_custom(area_lida= [0,0,93,77]),\
-            ["Data", "Valor"])
+        self.filt_colunas(
+            arquivo.leitura_custom_pandas(area_lida= [0,0,100,77]),["Data", "Valor"])
         self.__inserir_espacos()
         self.__col_inf()
         self.__col_data()
@@ -202,6 +208,8 @@ class Inter(Banco):
         lista_tabelas = []
 
         lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
+        lista_tabelas[0] = lista_tabelas[0][lista_tabelas[0]['Valor'] != '']
+        lista_tabelas[0] = lista_tabelas[0][lista_tabelas[0]['Valor'] != 'Deficiência de fala e a']
 
         return pd.concat(lista_tabelas, ignore_index=True)
 
@@ -241,12 +249,20 @@ class Inter(Banco):
             else:
                 coluna_data.append(data)
 
-        self.df.insert(0,'Data',coluna_data) #precisa passar por todas linhas de uma vez
+        self.df.insert(0,'Data',coluna_data) 
 
 class App:
-    #arquivo = Arquivo
-    #Gerencia a entrada de dados, como o main
     def __init__(self):
+        self.ref = {
+            'caixa': Caixa(),
+            'santa fé' : SantaFe(),
+            'santa fe' :SantaFe(),
+            'bb' : BancoDoBrasil(),
+            'banco do brasil': BancoDoBrasil(),
+            'sicoob': Sicoob(),
+            'inter' : Inter()
+        }
+
         self.window = window
         self.arquivo = Arquivo()
         self.tela()
@@ -257,8 +273,15 @@ class App:
         self.window.configure(background='darkblue')
         self.window.resizable(False,False)
         self.window.geometry('860x500')
-        # self.window.iconbitmap('Z:\\18 - PROGRAMAS DELTA\\code\\imgs\\delta-icon.ico')
+        self.window.iconbitmap(self.resource_path('imgs\\extr-icon.ico'))
         self.window.title('Conversor de Extrato')
+
+    def resource_path(self,relative_path):
+        base_path = getattr(
+            sys,
+            '_MEIPASS',
+            os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_path, relative_path)
 
     def index(self):
         self.index = Frame(self.window, bd=4, bg='lightblue')
@@ -268,12 +291,12 @@ class App:
         Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.25,relheight=0.15)
 
         #Logo
-        # self.logo = PhotoImage(file='Z:\\18 - PROGRAMAS DELTA\\code\\imgs\\deltaprice-hori.png')
+        self.logo = PhotoImage(file=self.resource_path('imgs\\deltaprice-hori.png'))
         
-        # self.logo = self.logo.subsample(4,4)
+        self.logo = self.logo.subsample(4,4)
         
-        # Label(self.window, image=self.logo, background='lightblue')\
-        #     .place(relx=0.175,rely=0.1,relwidth=0.7,relheight=0.2)
+        Label(self.window, image=self.logo, background='lightblue')\
+            .place(relx=0.175,rely=0.1,relwidth=0.7,relheight=0.2)
 
         #Labels e Entrys
         ###########Arquivo
@@ -313,48 +336,37 @@ class App:
             command= lambda: self.executar())\
                 .place(relx=0.65,rely=0.8,relwidth=0.25,relheight=0.12)
 
-    def definir_banco(self):
-        banco_selecionado = self.bancoEntry.get()
-        nome_arq = self.arqLabel['text']
-
-        if banco_selecionado == 'Caixa' or\
-            'caixa' in nome_arq.lower():
-            return Caixa()
-        elif banco_selecionado == 'Santa Fé' or\
-            'santa fé' in nome_arq.lower() or\
-            'santa fe' in nome_arq.lower():
-            return SantaFe()
-        elif banco_selecionado == 'Banco do Brasil' or\
-            'BB' in nome_arq.upper() or\
-            'banco do brasil' in nome_arq.lower():
-            return BancoDoBrasil()
-        elif banco_selecionado == 'Sicoob' or\
-            'sicoob' in nome_arq.lower():
-            return Sicoob()
-        elif banco_selecionado == 'Inter' or\
-            'inter' in nome_arq.lower():
-            return Inter()
-        raise Exception('Banco inválido, favor selecioná-lo')
+    def obj_banco(self):
+        if self.bancoEntry.get() != 'Escolha aqui':
+            for key, obj in self.ref.items():
+                if key in self.bancoEntry.get().lower():
+                    return obj
+        else:
+            nome_arq = self.arqLabel['text']
+            for chave, obj in self.ref.items():
+                if chave in nome_arq.lower():
+                    return obj
+            raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        try:       
-            banco = self.definir_banco()
+        # try:       
+            banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        except ValueError:
-            messagebox.showerror(title='Aviso', message= 'Operação cancelada')
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
+        # except ValueError:
+        #     messagebox.showerror(title='Aviso', message= 'Operação cancelada')
+        # except PermissionError:
+        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        # except UnboundLocalError:
+        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        # except subprocess.CalledProcessError:
+        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        # except FileNotFoundError:
+        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        # except Exception as error:
+        #     messagebox.showerror(title='Aviso', message= error)
        
 App()
