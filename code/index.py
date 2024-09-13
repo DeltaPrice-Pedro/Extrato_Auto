@@ -1,9 +1,11 @@
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from unidecode import unidecode
 from tkinter import messagebox
 from tkinter import *
 import tabula as tb
 import pandas as pd
 import subprocess
+import string
 import sys
 import os
 
@@ -30,16 +32,13 @@ class Arquivo:
         return pd.read_excel(self.caminho)
 
     def inserir(self, label):
-        self.caminho = askopenfilename()
+        caminho = askopenfilename()
 
-        if self.caminho == '':
+        if caminho == '':
             raise Exception('Operação cancelada')
-
-        if self.__tipo() not in ['pdf', 'lsx']:
-            raise Exception('Formato de arquivo inválido')
         
-        ultima_barra = self.caminho.rfind('/')
-        label['text'] = self.caminho[ultima_barra+1:]
+        self.caminho = self.validar_entrada(caminho)
+        label['text'] = caminho[caminho.rfind('/') +1:]
 
     def abrir(self,arquivo_final):
         file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
@@ -50,8 +49,22 @@ class Arquivo:
 
         os.startfile(file+'.xlsx')
 
-    def __tipo(self):
-        return self.caminho[ len(self.caminho) -3 :]
+    def __tipo(self, caminho):
+        return caminho[ len(caminho) -3 :]
+    
+    def validar_entrada(self, caminho):
+        if any(c not in string.ascii_letters for c in caminho):
+            caminho = self.formato_ascii(caminho)
+
+        if self.__tipo(caminho) not in ['pdf', 'lsx']:
+            raise Exception('Formato de arquivo inválido')
+        
+        return caminho
+
+    def formato_ascii(self, caminho):
+        caminho_uni = unidecode(caminho)
+        os.renames(caminho, caminho_uni)
+        return caminho_uni
 
 class Banco:
     def __init__(self):
@@ -65,10 +78,11 @@ class Banco:
         self.df = pd.concat(arquivo, ignore_index=True)
         self.df = self.df.drop('', axis=1, errors='ignore')
 
-    def inserir_espacos(self, valor = 'Valor'):
-        #Trocar a posição de "Histórico" e "Valor"
-        self.df.insert(1,'Valor', self.df.pop(valor))
-        self.df.insert(2,'Histórico' ,self.df.pop('Histórico'))
+    def inserir_espacos(self, valor = 'Valor', troca = True):
+        if troca == True:
+            #Trocar a posição de "Histórico" e "Valor"
+            self.df.insert(1,'Valor', self.df.pop(valor))
+            self.df.insert(2,'Histórico' ,self.df.pop('Histórico'))
 
         #Add espaços vazios
         self.df.insert(1,'Cód. Conta Débito','')
@@ -89,6 +103,18 @@ class Banco:
                 coluna_inf.append('')
 
         self.df.insert(6,'Inf.',coluna_inf)
+
+    def col_inf_sinal(self):
+        coluna_inf = []
+        #Tirar "-" de "Valor"
+        for index, row in self.df.iterrows():
+            if '-' in str(row['Valor']):
+                coluna_inf.append('D')
+                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('-','')
+            else:
+                coluna_inf.append('C')
+
+        self.df.insert(5,'Inf.',coluna_inf)
 
     def to_string(self):
         return self.titulo
@@ -202,7 +228,7 @@ class Inter(Banco):
         self.filt_colunas(
             arquivo.leitura_custom_pandas(area_lida= [0,0,100,77]),["Data", "Valor"])
         self.__inserir_espacos()
-        self.__col_inf()
+        self.col_inf_sinal()
         self.__col_data()
         
         lista_tabelas = []
@@ -224,18 +250,6 @@ class Inter(Banco):
 
         self.df = self.df.drop([0,1,2,3,4]).reset_index(drop=True)
 
-    def __col_inf(self):
-        coluna_inf = []
-        #Tirar "-" de "Valor"
-        for index, row in self.df.iterrows():
-            if '-' in str(row['Valor']):
-                coluna_inf.append('D')
-                self.df.loc[[index],['Valor']] = str(row['Valor']).replace('-','')
-            else:
-                coluna_inf.append('C')
-
-        self.df.insert(5,'Inf.',coluna_inf)
-
     def __col_data(self):
         coluna_data = []
         data = ''
@@ -251,6 +265,34 @@ class Inter(Banco):
 
         self.df.insert(0,'Data',coluna_data) 
 
+class Itau(Banco):
+    def __init__(self):
+        super().__init__()
+        self.titulo = 'Itau'
+
+    def gerar_extrato(self, arquivo):
+        self.filt_colunas(
+            arquivo.leitura_custom(area_lida= [30,0,80,80]),\
+                ["Data Mov.", "", "", "Valor"])
+        self.inserir_espacos(troca=False)
+        self.col_inf_sinal()
+        self.__col_hist()
+        
+        return self.df.loc[self.df['Valor'] != ''].reset_index(drop=True)
+
+    def __col_hist(self):
+        coluna_hist = []
+        hist = ''
+        self.df.fillna('', inplace=True)
+        for index, row in self.df.iterrows():
+            hist = str(row['Data Mov.'][8:])
+            coluna_hist.append(hist)
+
+            #Tirar "Histórico" de "Valor"
+            self.df.loc[[index],['Data Mov.']] = str(row['Data Mov.'])[:8]
+
+        self.df.insert(5,'Histórico',coluna_hist) #precisa passar por todas linhas de uma vez
+
 class App:
     def __init__(self):
         self.ref = {
@@ -260,7 +302,9 @@ class App:
             'bb' : BancoDoBrasil(),
             'banco do brasil': BancoDoBrasil(),
             'sicoob': Sicoob(),
-            'inter' : Inter()
+            'inter' : Inter(),
+            'itaú': Itau(),
+            'itau': Itau()
         }
 
         self.window = window
@@ -324,7 +368,7 @@ class App:
         
         self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter"]
+        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú"]
 
         self.bancoEntry.set('Escolha aqui')
 
