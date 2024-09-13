@@ -35,7 +35,7 @@ class Arquivo:
         caminho = askopenfilename()
 
         if caminho == '':
-            raise Exception('Operação cancelada')
+            return None
         
         self.caminho = self.validar_entrada(caminho)
         label['text'] = caminho[caminho.rfind('/') +1:]
@@ -53,18 +53,18 @@ class Arquivo:
         return caminho[ len(caminho) -3 :]
     
     def validar_entrada(self, caminho):
-        if any(c not in string.ascii_letters for c in caminho):
-            caminho = self.formato_ascii(caminho)
+        # if any(c not in string.ascii_letters for c in caminho):
+        #     caminho = self.formato_ascii(caminho)
 
         if self.__tipo(caminho) not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
         
         return caminho
 
-    def formato_ascii(self, caminho):
-        caminho_uni = unidecode(caminho)
-        os.renames(caminho, caminho_uni)
-        return caminho_uni
+    # def formato_ascii(self, caminho):
+    #     caminho_uni = unidecode(caminho)
+    #     os.renames(caminho, caminho_uni)
+    #     return caminho_uni
 
 class Banco:
     def __init__(self):
@@ -231,13 +231,12 @@ class Inter(Banco):
         self.col_inf_sinal()
         self.__col_data()
         
-        lista_tabelas = []
 
-        lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
-        lista_tabelas[0] = lista_tabelas[0][lista_tabelas[0]['Valor'] != '']
-        lista_tabelas[0] = lista_tabelas[0][lista_tabelas[0]['Valor'] != 'Deficiência de fala e a']
+        self.df = self.df.loc[self.df['Data'] != '']
+        self.df = self.df[self.df['Valor'] != '']
+        self.df = self.df[self.df['Valor'] != 'Deficiência de fala e a']
 
-        return pd.concat(lista_tabelas, ignore_index=True)
+        return self.df.reset_index(drop=True)
 
     def __inserir_espacos(self):
         #Trocar a posição de "Histórico" e "Valor"
@@ -393,24 +392,24 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        # try:       
+        try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        # except ValueError:
-        #     messagebox.showerror(title='Aviso', message= 'Operação cancelada')
-        # except PermissionError:
-        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        # except UnboundLocalError:
-        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except subprocess.CalledProcessError:
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, favor colocar o arquivo de extrato em uma das pastas nativas do computador e tire acentos de seu nome caso exista")
         # except subprocess.CalledProcessError:
         #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        # except FileNotFoundError:
-        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        # except Exception as error:
-        #     messagebox.showerror(title='Aviso', message= error)
+        except FileNotFoundError:
+            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error)
        
 App()
