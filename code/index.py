@@ -26,7 +26,7 @@ class Arquivo:
     def leitura_custom_pandas(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
                         relative_area=True, area= area_lida,\
-                            pandas_options={"header":None})
+                            pandas_options={"header":None}, encoding="ISO-8859-1")
 
     def leitura_excel(self):
         return pd.read_excel(self.caminho)
@@ -53,18 +53,18 @@ class Arquivo:
         return caminho[ len(caminho) -3 :]
     
     def validar_entrada(self, caminho):
-        # if any(c not in string.ascii_letters for c in caminho):
-        #     caminho = self.formato_ascii(caminho)
+        if any(c not in string.ascii_letters for c in caminho):
+            caminho = self.formato_ascii(caminho)
 
         if self.__tipo(caminho) not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
         
         return caminho
 
-    # def formato_ascii(self, caminho):
-    #     caminho_uni = unidecode(caminho)
-    #     os.renames(caminho, caminho_uni)
-    #     return caminho_uni
+    def formato_ascii(self, caminho):
+        caminho_uni = unidecode(caminho)
+        os.renames(caminho, caminho_uni)
+        return caminho_uni
 
 class Banco:
     def __init__(self):
@@ -334,12 +334,12 @@ class App:
         Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.25,relheight=0.15)
 
         #Logo
-        self.logo = PhotoImage(file=self.resource_path('imgs\\deltaprice-hori.png'))
+        self.logo = PhotoImage(file=self.resource_path('imgs\\extrato_horizontal.png'))
         
-        self.logo = self.logo.subsample(4,4)
+        self.logo = self.logo.subsample(3,3)
         
         Label(self.window, image=self.logo, background='lightblue')\
-            .place(relx=0.175,rely=0.1,relwidth=0.7,relheight=0.2)
+            .place(relx=0.15,rely=0.1,relwidth=0.7,relheight=0.2)
 
         #Labels e Entrys
         ###########Arquivo
@@ -404,9 +404,7 @@ class App:
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
         except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, favor colocar o arquivo de extrato em uma das pastas nativas do computador e tire acentos de seu nome caso exista")
-        # except subprocess.CalledProcessError:
-        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
         except FileNotFoundError:
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
