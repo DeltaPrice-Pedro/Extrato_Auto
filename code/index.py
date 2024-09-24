@@ -1,6 +1,7 @@
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from unidecode import unidecode
 from tkinter import messagebox
+from PyPDF2 import PdfReader
 from tkinter import *
 import tabula as tb
 import pandas as pd
@@ -30,6 +31,9 @@ class Arquivo:
 
     def leitura_excel(self):
         return pd.read_excel(self.caminho)
+    
+    def qnt_paginas(self):
+        return len(PdfReader(self.caminho).pages)
 
     def inserir(self, label):
         caminho = askopenfilename()
@@ -89,7 +93,7 @@ class Banco:
         self.df.insert(2,'Cód. Conta Crédito','')
         self.df.insert(4,'Cód. Histórico','')
 
-    def col_inf(self):
+    def col_inf(self, col = 6):
         coluna_inf =[]
         #Tirar C e D de "Valor"
         for index, row in self.df.iterrows():
@@ -102,9 +106,9 @@ class Banco:
             else:
                 coluna_inf.append('')
 
-        self.df.insert(6,'Inf.',coluna_inf)
+        self.df.insert(col,'Inf.',coluna_inf)
 
-    def col_inf_sinal(self):
+    def col_inf_sinal(self, col = 5):
         coluna_inf = []
         #Tirar "-" de "Valor"
         for index, row in self.df.iterrows():
@@ -114,7 +118,7 @@ class Banco:
             else:
                 coluna_inf.append('C')
 
-        self.df.insert(5,'Inf.',coluna_inf)
+        self.df.insert(col,'Inf.',coluna_inf)
 
     def to_string(self):
         return self.titulo
@@ -219,19 +223,50 @@ class Sicoob(Banco):
 
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
-class Inter(Banco):
-    def __init__(self):
-        super().__init__()
-        self.titulo = 'Inter'
+class IColorido():
+    def extrato(self, arquivo):
+        qnt_pages = arquivo.qnt_paginas()
 
-    def gerar_extrato(self, arquivo):
+        tabela1 = arquivo.leitura_custom_pandas(area_lida=[27,0,90,100], pg=1)
+        
+        if qnt_pages > 1:
+            arquivo_complt = arquivo.leitura_custom_pandas(area_lida=[25,0,90,100], pg=f'2-{qnt_pages}')
+            
+        arquivo_complt.insert(0,tabela1[0])
+
+        self.filt_colunas(arquivo_complt, ["Data","Histórico","Valor"])
+        self.inserir_espacos()
+        self.col_inf_sinal(6)
+        self.__filtro_linhas()
+
+        return self.df
+
+    def __filtro_linhas(self):
+        lista_tabelas = []
+        data_atual = ''
+        self.df.fillna('', inplace=True)
+        for index, row in self.df.iterrows():
+            if str(row['Data']) == '':
+                linhaPai = self.df.iloc[index - 1]
+                self.df.loc[[index - 1], ['Histórico']] = str(linhaPai['Histórico']) + str(row['Histórico'])
+            elif str(row['Data'][0]).isdigit():
+                data_atual = str(row['Data'])
+            elif str(row['Data'][0]).isalpha():
+                self.df.loc[[index], ['Histórico']] = str(row['Data']) + ' - ' + str(row['Histórico'])
+                self.df.loc[[index], ['Data']] = data_atual
+        
+        lista_tabelas.append(self.df.loc[self.df['Valor'] != ''])
+
+        self.df = pd.concat(lista_tabelas, ignore_index=True)
+
+class IClassico():
+    def extrato(self, arquivo):
         self.filt_colunas(
             arquivo.leitura_custom_pandas(area_lida= [0,0,100,77]),["Data", "Valor"])
         self.__inserir_espacos()
         self.col_inf_sinal()
         self.__col_data()
         
-
         self.df = self.df.loc[self.df['Data'] != '']
         self.df = self.df[self.df['Valor'] != '']
         self.df = self.df[self.df['Valor'] != 'Deficiência de fala e a']
@@ -255,7 +290,7 @@ class Inter(Banco):
         #Adcionar coluna data
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():
-            if str(row['Histórico'][0]).isdigit():
+            if str(row['Histórico'][0]).isdigit() and 'Saldo' in str(row['Histórico']):
                 pos_saldo = str(row['Histórico']).index('Saldo')
                 data = str(row['Histórico'][:pos_saldo - 1])
                 coluna_data.append('')
@@ -263,6 +298,24 @@ class Inter(Banco):
                 coluna_data.append(data)
 
         self.df.insert(0,'Data',coluna_data) 
+
+class Inter(Banco, IClassico, IColorido):
+    def __init__(self):
+        super().__init__()
+        self.titulo = 'Inter'
+
+    def tipo(self, arquivo):
+        arquivo_teste = arquivo.leitura_custom_pandas(area_lida=[0,0,100,77], pg=1)
+        arquivo_teste[0].fillna('', inplace=True)
+
+        if arquivo_teste[0].iloc[0,0] == '':
+            return True
+        return False
+
+    def gerar_extrato(self, arquivo):
+        if self.tipo(arquivo) == True:
+            return IColorido.extrato(self, arquivo)
+        return IClassico.extrato(self, arquivo)
 
 class Itau(Banco):
     def __init__(self):
@@ -392,22 +445,22 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        try:       
+        # try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
+        # except PermissionError:
+        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        # except UnboundLocalError:
+        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        # except subprocess.CalledProcessError:
+        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        # except FileNotFoundError:
+        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        # except Exception as error:
+        #     messagebox.showerror(title='Aviso', message= error)
        
 App()
