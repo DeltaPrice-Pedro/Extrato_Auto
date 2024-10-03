@@ -2,7 +2,8 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from unidecode import unidecode
 from tkinter import messagebox
 from PyPDF2 import PdfReader
-from tkinter import *
+from tkinter import (
+    Tk, Label, PhotoImage, Button, OptionMenu, Frame, StringVar)
 import tabula as tb
 import pandas as pd
 import subprocess
@@ -143,8 +144,14 @@ class BancoDoBrasil(Banco):
         self.titulo = 'Banco do Brasil'
 
     def gerar_extrato(self, arquivo):
+        if len(arquivo[0].columns) == 8:
+            colunas_lidas = ["Balancete","","","","Histórico","","Valor R$",""]
+            arquivo[0] = arquivo[0].drop(0).reset_index(drop=True)
+        else:
+            colunas_lidas = ["Balancete","","","Histórico","","Valor R$",""]
+
         self.filt_colunas(arquivo.leitura_simples(),\
-            ["balancete","","","","Histórico","","Valor R$",""])
+            colunas_lidas)
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
@@ -445,22 +452,22 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        # try:       
+        try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        # except PermissionError:
-        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        # except UnboundLocalError:
-        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        # except subprocess.CalledProcessError:
-        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        # except FileNotFoundError:
-        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        # except Exception as error:
-        #     messagebox.showerror(title='Aviso', message= error)
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except subprocess.CalledProcessError:
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        except FileNotFoundError:
+            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error + '- favor avisar o desenvolvedor')
        
 App()
