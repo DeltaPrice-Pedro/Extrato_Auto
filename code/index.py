@@ -352,6 +352,47 @@ class Itau(Banco):
 
         self.df.insert(5,'Histórico',coluna_hist) #precisa passar por todas linhas de uma vez
 
+class MercadoLivre(Banco):
+    def __init__(self):
+        super().__init__()
+        self.titulo = 'Mercado Livre'
+
+    def gerar_extrato(self, arquivo: Arquivo):
+        qnt_pages = arquivo.qnt_paginas()
+
+        tabela1 = arquivo.leitura_custom(area_lida=[27,0,100,100], pg=1)
+        
+        if qnt_pages > 1:
+            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+            
+        arquivo_complt.insert(0,tabela1[0])
+
+        self.filt_colunas(arquivo_complt, ["Data", "Histórico", "", "Valor", ""])
+        self.inserir_espacos(troca=True)
+        self.col_inf_sinal(6)
+        self.__filtro_linhas()
+
+        return self.df
+
+    def __filtro_linhas(self):
+        lista_tabelas = []
+        self.df.fillna('', inplace=True)
+        for index, row in self.df.iterrows():
+            if str(row['Data']) == '':
+                if index != len(self.df) and self.df.iloc[index + 1]['Data'] != ''\
+                    and self.df.iloc[index - 2]['Data'] != '' \
+                        or self.df.iloc[index - 2]['Histórico'] not in self.df.iloc[index - 1]['Histórico']:
+                    linhaFilho = self.df.iloc[index + 1]
+                    self.df.loc[[index + 1], ['Histórico']] = \
+                    f"{str(row['Histórico'])}  {str(linhaFilho['Histórico'])}" 
+                else:
+                    linhaPai = self.df.iloc[index - 1]
+                    self.df.loc[[index - 1], ['Histórico']] = \
+                    f"{str(linhaPai['Histórico'])}  {str(row['Histórico'])}"
+
+        lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
+        self.df = pd.concat(lista_tabelas, ignore_index=True)
+
 class App:
     def __init__(self):
         self.ref = {
@@ -363,7 +404,8 @@ class App:
             'sicoob': Sicoob(),
             'inter' : Inter(),
             'itaú': Itau(),
-            'itau': Itau()
+            'itau': Itau(),
+            'mercado livre': MercadoLivre()
         }
 
         self.window = window
@@ -427,7 +469,7 @@ class App:
         
         self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú"]
+        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Livre"]
 
         self.bancoEntry.set('Escolha aqui')
 
