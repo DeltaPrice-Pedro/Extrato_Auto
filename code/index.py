@@ -2,7 +2,8 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from unidecode import unidecode
 from tkinter import messagebox
 from PyPDF2 import PdfReader
-from tkinter import *
+from tkinter import (
+    Tk, Label, PhotoImage, Button, OptionMenu, Frame, StringVar)
 import tabula as tb
 import pandas as pd
 import subprocess
@@ -143,8 +144,14 @@ class BancoDoBrasil(Banco):
         self.titulo = 'Banco do Brasil'
 
     def gerar_extrato(self, arquivo):
+        if len(arquivo[0].columns) == 8:
+            colunas_lidas = ["Balancete","","","","Histórico","","Valor R$",""]
+            arquivo[0] = arquivo[0].drop(0).reset_index(drop=True)
+        else:
+            colunas_lidas = ["Balancete","","","Histórico","","Valor R$",""]
+
         self.filt_colunas(arquivo.leitura_simples(),\
-            ["balancete","","","","Histórico","","Valor R$",""])
+            colunas_lidas)
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
@@ -345,6 +352,47 @@ class Itau(Banco):
 
         self.df.insert(5,'Histórico',coluna_hist) #precisa passar por todas linhas de uma vez
 
+class MercadoLivre(Banco):
+    def __init__(self):
+        super().__init__()
+        self.titulo = 'Mercado Livre'
+
+    def gerar_extrato(self, arquivo: Arquivo):
+        qnt_pages = arquivo.qnt_paginas()
+
+        tabela1 = arquivo.leitura_custom(area_lida=[27,0,100,100], pg=1)
+        
+        if qnt_pages > 1:
+            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+            
+        arquivo_complt.insert(0,tabela1[0])
+
+        self.filt_colunas(arquivo_complt, ["Data", "Histórico", "", "Valor", ""])
+        self.inserir_espacos(troca=True)
+        self.col_inf_sinal(6)
+        self.__filtro_linhas()
+
+        return self.df
+
+    def __filtro_linhas(self):
+        lista_tabelas = []
+        self.df.fillna('', inplace=True)
+        for index, row in self.df.iterrows():
+            if str(row['Data']) == '':
+                if index != len(self.df) and self.df.iloc[index + 1]['Data'] != ''\
+                    and self.df.iloc[index - 2]['Data'] != '' \
+                        or self.df.iloc[index - 2]['Histórico'] not in self.df.iloc[index - 1]['Histórico']:
+                    linhaFilho = self.df.iloc[index + 1]
+                    self.df.loc[[index + 1], ['Histórico']] = \
+                    f"{str(row['Histórico'])}  {str(linhaFilho['Histórico'])}" 
+                else:
+                    linhaPai = self.df.iloc[index - 1]
+                    self.df.loc[[index - 1], ['Histórico']] = \
+                    f"{str(linhaPai['Histórico'])}  {str(row['Histórico'])}"
+
+        lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
+        self.df = pd.concat(lista_tabelas, ignore_index=True)
+
 class App:
     def __init__(self):
         self.ref = {
@@ -356,7 +404,8 @@ class App:
             'sicoob': Sicoob(),
             'inter' : Inter(),
             'itaú': Itau(),
-            'itau': Itau()
+            'itau': Itau(),
+            'mercado livre': MercadoLivre()
         }
 
         self.window = window
@@ -420,7 +469,7 @@ class App:
         
         self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú"]
+        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Livre"]
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -445,22 +494,22 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        # try:       
+        try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        # except PermissionError:
-        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        # except UnboundLocalError:
-        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        # except subprocess.CalledProcessError:
-        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        # except FileNotFoundError:
-        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        # except Exception as error:
-        #     messagebox.showerror(title='Aviso', message= error)
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except subprocess.CalledProcessError:
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        except FileNotFoundError:
+            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error + '- favor avisar o desenvolvedor')
        
 App()
