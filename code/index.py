@@ -55,14 +55,16 @@ class Arquivo:
         os.startfile(file+'.xlsx')
 
     def __tipo(self, caminho):
-        return caminho[ len(caminho) -3 :]
+        return caminho[ len(caminho) -3 :].lower()
     
     def validar_entrada(self, caminho):
-        if any(c not in string.ascii_letters for c in caminho):
-            caminho = self.formato_ascii(caminho)
-
         if self.__tipo(caminho) not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
+
+        caminho_acsii = self.formato_ascii(caminho)
+        if caminho != caminho_acsii:
+            caminho = caminho_acsii
+            messagebox.showinfo(title='Aviso', message='O caminho do arquivo precisou ser mudado, para encontrá-lo novamente siga o caminho a seguir: \n' + caminho)
         
         return caminho
 
@@ -83,16 +85,17 @@ class Banco:
         self.df = pd.concat(arquivo, ignore_index=True)
         self.df = self.df.drop('', axis=1, errors='ignore')
 
-    def inserir_espacos(self, valor = 'Valor', troca = True):
+    def inserir_espacos(self, valor = 'Valor', troca = True,\
+        ordem_espacos = [1,2,4]):
         if troca == True:
             #Trocar a posição de "Histórico" e "Valor"
             self.df.insert(1,'Valor', self.df.pop(valor))
             self.df.insert(2,'Histórico' ,self.df.pop('Histórico'))
 
         #Add espaços vazios
-        self.df.insert(1,'Cód. Conta Débito','')
-        self.df.insert(2,'Cód. Conta Crédito','')
-        self.df.insert(4,'Cód. Histórico','')
+        self.df.insert(ordem_espacos[0],'Cód. Conta Débito','')
+        self.df.insert(ordem_espacos[1],'Cód. Conta Crédito','')
+        self.df.insert(ordem_espacos[2],'Cód. Histórico','')
 
     def col_inf(self, col = 6):
         coluna_inf =[]
@@ -393,6 +396,75 @@ class MercadoLivre(Banco):
         lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
+class Bradesco(Banco):
+    def __init__(self):
+        super().__init__()
+        self.titulo = 'Bradesco'
+
+    def gerar_extrato(self, arquivo: Arquivo):
+        arquivo_complt = arquivo.leitura_simples(pg= 'all')
+            
+        self.__filtro_colunas(arquivo_complt)
+        self.inserir_espacos(troca=False, ordem_espacos=[1,2,3])
+        self.__col_inf()
+        self.__col_data()
+        self.__filtro_linhas()
+
+        return self.df
+
+    def __filtro_colunas(self, arquivo):
+        for index, self.df in enumerate(arquivo):
+            if 'Histórico' in self.df.columns:
+                arquivo.pop(index)
+                continue 
+            self.df.columns = ["Data", "Histórico", "", "Crédito", "Débito", ""]
+
+        self.df = pd.concat(arquivo, ignore_index=True)
+        self.df = self.df.drop('', axis=1)
+
+    def __col_inf(self):
+        coluna_inf = []
+        coluna_valor = []
+        self.df.fillna('', inplace=True)
+        for index, row in self.df.iterrows():
+            if str(row['Débito']) != '':
+                coluna_inf.append('D')
+                coluna_valor.append(str(row['Débito']).replace('-',''))
+            elif str(row['Crédito']) != '':
+                    coluna_inf.append('C')
+                    coluna_valor.append(str(row['Crédito']))
+            else:
+                    coluna_valor.append('')
+                    coluna_inf.append('')
+
+        self.df.insert(3, 'Valor', coluna_valor)
+        self.df.insert(6,'Inf.', coluna_inf)
+        self.df = self.df.drop('Débito', axis=1)
+        self.df = self.df.drop('Crédito', axis=1)
+
+    def __col_data(self):
+        data_atual = ''
+        for index, row in self.df.iterrows():
+            if str(row['Data']) == '':
+                self.df.loc[[index], ['Data']] = data_atual
+            else:
+                data_atual = str(row['Data'])
+
+    def __filtro_linhas(self):
+        lista_tabelas = []
+        for index, row in self.df.iterrows():
+            if str(row['Histórico']) == '':
+                linhaPai = self.df.iloc[index - 1]
+                if index + 1 == len(self.df):
+                    linhaFilho = self.df.iloc[index]
+                else:
+                    linhaFilho = self.df.iloc[index + 1]
+                self.df.loc[[index], ['Histórico']] = \
+                    f"{str(linhaPai['Histórico'])}  {str(linhaFilho['Histórico'])}"
+
+        lista_tabelas.append(self.df.loc[self.df['Valor'] != ''])
+        self.df = pd.concat(lista_tabelas, ignore_index=True)
+
 class App:
     def __init__(self):
         self.ref = {
@@ -405,7 +477,8 @@ class App:
             'inter' : Inter(),
             'itaú': Itau(),
             'itau': Itau(),
-            'mercado livre': MercadoLivre()
+            'mercado livre': MercadoLivre(),
+            'bradesco': Bradesco()
         }
 
         self.window = window
@@ -469,7 +542,7 @@ class App:
         
         self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Livre"]
+        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Livre", "Bradesco"]
 
         self.bancoEntry.set('Escolha aqui')
 
