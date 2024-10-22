@@ -37,18 +37,30 @@ class Arquivo:
         return len(PdfReader(self.caminho).pages)
 
     def inserir(self, label):
-        caminho = askopenfilename()
+        try:
+            caminho = askopenfilename()
 
-        if caminho == '':
-            return None
-        
-        self.caminho = self.validar_entrada(caminho)
-        label['text'] = caminho[caminho.rfind('/') +1:]
+            if caminho == '':
+                return None
+            
+            self.caminho = self.validar_entrada(caminho)
 
-    def abrir(self,arquivo_final):
+            label['text'] = caminho[caminho.rfind('/') +1:]
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error)
+
+    def abrir(self,arquivo_final: pd.DataFrame):
         file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
 
-        arquivo_final.style.hide().to_excel(file+'.xlsx')
+        if file == '':
+            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
+            if resp == True:
+                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
+                return None
+            else:
+                return self.abrir(arquivo_final)
+
+        arquivo_final.to_excel(file+'.xlsx', index=False)
 
         messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
 
@@ -58,7 +70,7 @@ class Arquivo:
         return caminho[ len(caminho) -3 :].lower()
     
     def validar_entrada(self, caminho):
-        if self.__tipo(caminho) not in ['pdf', 'lsx']:
+        if self.__tipo(caminho).lower() not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
 
         caminho_acsii = self.formato_ascii(caminho)
@@ -355,10 +367,10 @@ class Itau(Banco):
 
         self.df.insert(5,'Histórico',coluna_hist) #precisa passar por todas linhas de uma vez
 
-class MercadoLivre(Banco):
+class MercadoPago(Banco):
     def __init__(self):
         super().__init__()
-        self.titulo = 'Mercado Livre'
+        self.titulo = 'Mercado Pago'
 
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
@@ -402,8 +414,16 @@ class Bradesco(Banco):
         self.titulo = 'Bradesco'
 
     def gerar_extrato(self, arquivo: Arquivo):
-        arquivo_complt = arquivo.leitura_simples(pg= 'all')
+        qnt_pages = arquivo.qnt_paginas()
+
+        tabela1 = arquivo.leitura_custom(area_lida=[26,0,100,100], pg=1)
+        
+        if qnt_pages > 1:
+            arquivo_complt = arquivo.leitura_custom(pg=f'2-{qnt_pages}',\
+                area_lida=[10,0,100,100])
             
+        arquivo_complt.insert(0,tabela1[0])
+
         self.__filtro_colunas(arquivo_complt)
         self.inserir_espacos(troca=False, ordem_espacos=[1,2,3])
         self.__col_inf()
@@ -414,7 +434,7 @@ class Bradesco(Banco):
 
     def __filtro_colunas(self, arquivo):
         for index, self.df in enumerate(arquivo):
-            if 'Histórico' in self.df.columns:
+            if len(self.df.columns) != 6:
                 arquivo.pop(index)
                 continue 
             self.df.columns = ["Data", "Histórico", "", "Crédito", "Débito", ""]
@@ -451,9 +471,9 @@ class Bradesco(Banco):
                 data_atual = str(row['Data'])
 
     def __filtro_linhas(self):
-        lista_tabelas = []
         for index, row in self.df.iterrows():
-            if str(row['Histórico']) == '':
+            if str(row['Histórico']) == '' or\
+                str(row['Histórico'])[0].isnumeric():
                 linhaPai = self.df.iloc[index - 1]
                 if index + 1 == len(self.df):
                     linhaFilho = self.df.iloc[index]
@@ -462,8 +482,8 @@ class Bradesco(Banco):
                 self.df.loc[[index], ['Histórico']] = \
                     f"{str(linhaPai['Histórico'])}  {str(linhaFilho['Histórico'])}"
 
-        lista_tabelas.append(self.df.loc[self.df['Valor'] != ''])
-        self.df = pd.concat(lista_tabelas, ignore_index=True)
+        self.df = self.df[self.df.Valor != '']
+        self.df = self.df[self.df.Data.apply(lambda x: x[0].isnumeric())]
 
 class App:
     def __init__(self):
@@ -477,7 +497,7 @@ class App:
             'inter' : Inter(),
             'itaú': Itau(),
             'itau': Itau(),
-            'mercado livre': MercadoLivre(),
+            'mercado pago': MercadoPago(),
             'bradesco': Bradesco()
         }
 
@@ -542,7 +562,7 @@ class App:
         
         self.bancoEntry = StringVar()
 
-        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Livre", "Bradesco"]
+        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Pago", "Bradesco"]
 
         self.bancoEntry.set('Escolha aqui')
 
@@ -583,6 +603,6 @@ class App:
         except FileNotFoundError:
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
-            messagebox.showerror(title='Aviso', message= error + '- favor avisar o desenvolvedor')
+            messagebox.showerror(title='Aviso', message= error)
        
 App()
