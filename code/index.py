@@ -21,6 +21,10 @@ class Arquivo:
     def leitura_simples(self, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream=True)
 
+    def leitura_simples_pandas(self, pg = 'all'):
+        return tb.read_pdf(self.caminho, pages= pg, stream=True,\
+            pandas_options={'header': None})
+
     def leitura_custom(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
                         relative_area=True, area= area_lida)
@@ -158,20 +162,32 @@ class BancoDoBrasil(Banco):
         super().__init__()
         self.titulo = 'Banco do Brasil'
 
-    def gerar_extrato(self, arquivo):
-        if len(arquivo[0].columns) == 8:
-            colunas_lidas = ["Balancete","","","","Histórico","","Valor R$",""]
-            arquivo[0] = arquivo[0].drop(0).reset_index(drop=True)
-        else:
-            colunas_lidas = ["Balancete","","","Histórico","","Valor R$",""]
+    def gerar_extrato(self, arquivo: Arquivo):
+        tabela = arquivo.leitura_simples_pandas()
 
-        self.filt_colunas(arquivo.leitura_simples(),\
-            colunas_lidas)
+        self.filt_colunas(tabela)
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
 
         return self.df.loc[self.df['Valor'] != 0.0]
+
+    def filt_colunas(self, arquivo: list[pd.DataFrame]):
+        for tabelas in arquivo:
+            colunas_lidas = [
+                "Balancete","","Histórico","","Valor R$",""
+            ]
+
+            if len(tabelas.columns) == 8:
+                colunas_lidas = [
+                    "Balancete","","","Histórico","","","Valor R$",""
+                ]
+                tabelas = tabelas.drop(0).reset_index(drop=True)
+
+            tabelas.columns = colunas_lidas
+            tabelas = tabelas.drop('', axis=1, errors='ignore')
+            
+        self.df = pd.concat(arquivo, ignore_index=True)
 
     def __filt_linhas(self):
         self.df.fillna(0.0, inplace=True)
@@ -587,22 +603,22 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        try:       
+        # try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
+        # except PermissionError:
+        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        # except UnboundLocalError:
+        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        # except subprocess.CalledProcessError:
+        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        # except FileNotFoundError:
+        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        # except Exception as error:
+        #     messagebox.showerror(title='Aviso', message= error)
        
 App()
