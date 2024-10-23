@@ -19,11 +19,15 @@ class Arquivo:
         self.caminho = ''
 
     def leitura_simples(self, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream=True)
+        return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1")
+
+    def leitura_simples_pandas(self, pg = 'all'):
+        return tb.read_pdf(self.caminho, pages= pg, stream=True,\
+            pandas_options={'header': None}, encoding="ISO-8859-1")
 
     def leitura_custom(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
-                        relative_area=True, area= area_lida)
+                        relative_area=True, area= area_lida, encoding="ISO-8859-1")
     
     def leitura_custom_pandas(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
@@ -158,28 +162,32 @@ class BancoDoBrasil(Banco):
         super().__init__()
         self.titulo = 'Banco do Brasil'
 
-    def gerar_extrato(self, arquivo):
-        if len(arquivo[0].columns) == 8:
-            colunas_lidas = ["Balancete","","","","Histórico","","Valor R$",""]
-            arquivo[0] = arquivo[0].drop(0).reset_index(drop=True)
-        else:
-            colunas_lidas = ["Balancete","","","Histórico","","Valor R$",""]
+    def gerar_extrato(self, arquivo: Arquivo):
+        qnt_pages = arquivo.qnt_paginas()
 
-        self.filt_colunas(arquivo.leitura_simples(),\
-            colunas_lidas)
+        tabela1 = arquivo.leitura_custom_pandas(area_lida=[25,0,100,100], pg=1)
+        
+        if qnt_pages > 1:
+            arquivo_complt = arquivo.leitura_custom_pandas\
+                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100])
+            
+        arquivo_complt.insert(0,tabela1[0])
+
+        self.filt_colunas(arquivo_complt, \
+            ["Data", "", "Histórico", "", "Valor R$", ""])
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
 
-        return self.df.loc[self.df['Valor'] != 0.0]
+        return self.df[self.df['Valor'] != 0.0]
 
     def __filt_linhas(self):
         self.df.fillna(0.0, inplace=True)
         for index, row in self.df.iterrows():
-            if row['balancete'] == 0.0:
+            if row['Data'] == 0.0:
                 linhaAcima = self.df.iloc[index - 1]
-                self.df.loc[[index - 1],['Histórico']] = linhaAcima['Histórico']+ ': ' + row['Histórico']
-
+                self.df.loc[[index - 1],['Histórico']] =\
+                    f"{str(linhaAcima['Histórico'])[10:]} ~ {str(row['Histórico'])}"
 
 class SantaFe(Banco):
     def __init__(self):
@@ -217,11 +225,25 @@ class Sicoob(Banco):
         #senao retorna a função com Index -1
         return self.buscarLinhaPai(index - 1, tabela)
 
-    def gerar_extrato(self, arquivo):
-        tabela1 = arquivo.leitura_custom(area_lida= [13,0,100,100], pg=1)
-        tabela2 = arquivo.leitura_simples()
-        tabela2.insert(0, tabela1[0])
-        self.filt_colunas(tabela2, ["Data", "", "Histórico", "Valor"])
+    def gerar_extrato(self, arquivo: Arquivo):
+        qnt_pages = arquivo.qnt_paginas()
+        
+        ver_incolor = False
+        tabela1 = arquivo.leitura_custom(area_lida=[13,0,100,100], pg=1)
+        
+        if tabela1[0].iloc[0,1] == 'Lançamentos':
+            ver_incolor = True
+            tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)
+
+        if qnt_pages > 1:
+            if ver_incolor == True:
+                arquivo_complt = arquivo.leitura_custom_pandas(
+                    area_lida=[3,0,95,100], pg=f'2-{qnt_pages}')
+            else:
+                arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+            
+        arquivo_complt.insert(0,tabela1[0])
+        self.filt_colunas(arquivo_complt, ["Data", "", "Histórico", "Valor"])
         self.inserir_espacos()
         self.col_inf()
         self.__filt_linhas()
@@ -229,10 +251,11 @@ class Sicoob(Banco):
         return self.df
 
     def __filt_linhas(self):
-        lista_tabelas = []
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():
-            if row['Data'] == '' and 'SALDO DO DIA ===== >' not in row['Histórico']:
+            if row['Data'] == ''\
+                and 'SALDO DO DIA' not in row['Histórico']\
+                    and index + 1 != len(self.df):
                 linhaAbaixo = self.df.iloc[index + 1]
                 if linhaAbaixo['Histórico'] != '':
                     indexPai = self.buscarLinhaPai(index - 1, self.df)
@@ -241,9 +264,8 @@ class Sicoob(Banco):
                 else:
                     self.df.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' - ' + str(row['Histórico'])
 
-        lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
-
-        self.df = pd.concat(lista_tabelas, ignore_index=True)
+        self.df = self.df[self.df['Data'] != '']
+        self.df = self.df[self.df['Inf.'] != '']
 
 class IColorido():
     def extrato(self, arquivo):
@@ -587,22 +609,22 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        try:       
+        # try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
+        # except PermissionError:
+        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        # except UnboundLocalError:
+        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        # except subprocess.CalledProcessError:
+        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        # except FileNotFoundError:
+        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        # except Exception as error:
+        #     messagebox.showerror(title='Aviso', message= error)
        
 App()
