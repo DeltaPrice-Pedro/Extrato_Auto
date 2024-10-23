@@ -187,7 +187,7 @@ class BancoDoBrasil(Banco):
             if row['Data'] == 0.0:
                 linhaAcima = self.df.iloc[index - 1]
                 self.df.loc[[index - 1],['Histórico']] =\
-                    f"{str(linhaAcima['Histórico'])} ~ {str(row['Histórico'])}"
+                    f"{str(linhaAcima['Histórico'])[10:]} ~ {str(row['Histórico'])}"
 
 class SantaFe(Banco):
     def __init__(self):
@@ -226,10 +226,24 @@ class Sicoob(Banco):
         return self.buscarLinhaPai(index - 1, tabela)
 
     def gerar_extrato(self, arquivo: Arquivo):
-        tabela1 = arquivo.leitura_custom(area_lida= [13,0,100,100], pg=1)
-        tabela2 = arquivo.leitura_simples_pandas()
-        tabela2.insert(0, tabela1[0])
-        self.filt_colunas(tabela2, ["Data", "", "Histórico", "Valor"])
+        qnt_pages = arquivo.qnt_paginas()
+        
+        ver_incolor = False
+        tabela1 = arquivo.leitura_custom(area_lida=[13,0,100,100], pg=1)
+        
+        if tabela1[0].iloc[0,1] == 'Lançamentos':
+            ver_incolor = True
+            tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)
+
+        if qnt_pages > 1:
+            if ver_incolor == True:
+                arquivo_complt = arquivo.leitura_custom_pandas(
+                    area_lida=[3,0,95,100], pg=f'2-{qnt_pages}')
+            else:
+                arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+            
+        arquivo_complt.insert(0,tabela1[0])
+        self.filt_colunas(arquivo_complt, ["Data", "", "Histórico", "Valor"])
         self.inserir_espacos()
         self.col_inf()
         self.__filt_linhas()
@@ -237,10 +251,11 @@ class Sicoob(Banco):
         return self.df
 
     def __filt_linhas(self):
-        lista_tabelas = []
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():
-            if row['Data'] == '' and 'SALDO DO DIA ===== >' not in row['Histórico']:
+            if row['Data'] == ''\
+                and 'SALDO DO DIA' not in row['Histórico']\
+                    and index + 1 != len(self.df):
                 linhaAbaixo = self.df.iloc[index + 1]
                 if linhaAbaixo['Histórico'] != '':
                     indexPai = self.buscarLinhaPai(index - 1, self.df)
@@ -249,9 +264,8 @@ class Sicoob(Banco):
                 else:
                     self.df.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' - ' + str(row['Histórico'])
 
-        lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
-
-        self.df = pd.concat(lista_tabelas, ignore_index=True)
+        self.df = self.df[self.df['Data'] != '']
+        self.df = self.df[self.df['Inf.'] != '']
 
 class IColorido():
     def extrato(self, arquivo):
