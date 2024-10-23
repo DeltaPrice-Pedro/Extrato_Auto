@@ -19,15 +19,15 @@ class Arquivo:
         self.caminho = ''
 
     def leitura_simples(self, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream=True)
+        return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1")
 
     def leitura_simples_pandas(self, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream=True,\
-            pandas_options={'header': None})
+            pandas_options={'header': None}, encoding="ISO-8859-1")
 
     def leitura_custom(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
-                        relative_area=True, area= area_lida)
+                        relative_area=True, area= area_lida, encoding="ISO-8859-1")
     
     def leitura_custom_pandas(self, area_lida, pg = 'all'):
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
@@ -163,39 +163,31 @@ class BancoDoBrasil(Banco):
         self.titulo = 'Banco do Brasil'
 
     def gerar_extrato(self, arquivo: Arquivo):
-        tabela = arquivo.leitura_simples_pandas()
+        qnt_pages = arquivo.qnt_paginas()
 
-        self.filt_colunas(tabela)
+        tabela1 = arquivo.leitura_custom_pandas(area_lida=[25,0,100,100], pg=1)
+        
+        if qnt_pages > 1:
+            arquivo_complt = arquivo.leitura_custom_pandas\
+                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100])
+            
+        arquivo_complt.insert(0,tabela1[0])
+
+        self.filt_colunas(arquivo_complt, \
+            ["Data", "", "Histórico", "", "Valor R$", ""])
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
 
-        return self.df.loc[self.df['Valor'] != 0.0]
-
-    def filt_colunas(self, arquivo: list[pd.DataFrame]):
-        for tabelas in arquivo:
-            colunas_lidas = [
-                "Balancete","","Histórico","","Valor R$",""
-            ]
-
-            if len(tabelas.columns) == 8:
-                colunas_lidas = [
-                    "Balancete","","","Histórico","","","Valor R$",""
-                ]
-                tabelas = tabelas.drop(0).reset_index(drop=True)
-
-            tabelas.columns = colunas_lidas
-            tabelas = tabelas.drop('', axis=1, errors='ignore')
-            
-        self.df = pd.concat(arquivo, ignore_index=True)
+        return self.df[self.df['Valor'] != 0.0]
 
     def __filt_linhas(self):
         self.df.fillna(0.0, inplace=True)
         for index, row in self.df.iterrows():
-            if row['balancete'] == 0.0:
+            if row['Data'] == 0.0:
                 linhaAcima = self.df.iloc[index - 1]
-                self.df.loc[[index - 1],['Histórico']] = linhaAcima['Histórico']+ ': ' + row['Histórico']
-
+                self.df.loc[[index - 1],['Histórico']] =\
+                    f"{str(linhaAcima['Histórico'])} ~ {str(row['Histórico'])}"
 
 class SantaFe(Banco):
     def __init__(self):
@@ -233,9 +225,9 @@ class Sicoob(Banco):
         #senao retorna a função com Index -1
         return self.buscarLinhaPai(index - 1, tabela)
 
-    def gerar_extrato(self, arquivo):
+    def gerar_extrato(self, arquivo: Arquivo):
         tabela1 = arquivo.leitura_custom(area_lida= [13,0,100,100], pg=1)
-        tabela2 = arquivo.leitura_simples()
+        tabela2 = arquivo.leitura_simples_pandas()
         tabela2.insert(0, tabela1[0])
         self.filt_colunas(tabela2, ["Data", "", "Histórico", "Valor"])
         self.inserir_espacos()
