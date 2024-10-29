@@ -609,22 +609,22 @@ class App:
             raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def executar(self):
-        # try:       
+        try:       
             banco = self.obj_banco()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
             self.arquivo.abrir(arquivo_final)
          
-        # except PermissionError:
-        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        # except UnboundLocalError:
-        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        # except subprocess.CalledProcessError:
-        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        # except FileNotFoundError:
-        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        # except Exception as error:
-        #     messagebox.showerror(title='Aviso', message= error)
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except subprocess.CalledProcessError:
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        except FileNotFoundError:
+            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error)
        
 App()
