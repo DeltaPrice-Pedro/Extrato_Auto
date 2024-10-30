@@ -228,6 +228,27 @@ class Sicoob(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
         
+        if qnt_pages == 1:
+            arq_complt = self.opcao_simples(arquivo)
+        else:
+            arq_complt = self.opcao_completa(arquivo, qnt_pages)
+
+        self.filt_colunas(arq_complt, ["Data", "", "Histórico", "Valor"])
+        self.inserir_espacos()
+        self.col_inf()
+        self.__filt_linhas()
+
+        return self.df
+
+    def opcao_simples(self, arquivo: Arquivo) -> list[pd.DataFrame]:
+        index = 100
+        tabela1 = arquivo.leitura_custom([13,0,75,100])
+        while len(tabela1[0].iloc[2,0]) > 10:
+            index = index - 10
+            tabela1 = arquivo.leitura_custom([13,0,index,100])
+        return tabela1
+
+    def opcao_completa(self, arquivo: Arquivo, qnt_pages: int) -> list[pd.DataFrame]:
         ver_incolor = False
         tabela1 = arquivo.leitura_custom(area_lida=[13,0,100,100], pg=1)
         
@@ -235,20 +256,14 @@ class Sicoob(Banco):
             ver_incolor = True
             tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)
 
-        if qnt_pages > 1:
-            if ver_incolor == True:
-                arquivo_complt = arquivo.leitura_custom_pandas(
-                    area_lida=[3,0,95,100], pg=f'2-{qnt_pages}')
-            else:
-                arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+        if ver_incolor == True:
+            arquivo_complt = arquivo.leitura_custom_pandas(
+                area_lida=[3,0,95,100], pg=f'2-{qnt_pages}')
+        else:
+            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
             
         arquivo_complt.insert(0,tabela1[0])
-        self.filt_colunas(arquivo_complt, ["Data", "", "Histórico", "Valor"])
-        self.inserir_espacos()
-        self.col_inf()
-        self.__filt_linhas()
-
-        return self.df
+        return arquivo_complt
 
     def __filt_linhas(self):
         self.df.fillna('', inplace=True)
