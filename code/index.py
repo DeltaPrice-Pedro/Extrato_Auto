@@ -1,9 +1,8 @@
 from tkinter.filedialog import askopenfilename, asksaveasfilename
+from abc import abstractmethod, ABCMeta
 from unidecode import unidecode
 from tkinter import messagebox
 from PyPDF2 import PdfReader
-from tkinter import (
-    Tk, Label, PhotoImage, Button, OptionMenu, Frame, StringVar)
 import tabula as tb
 import pandas as pd
 import subprocess
@@ -11,69 +10,60 @@ import string
 import sys
 import os
 
-window = Tk()
+from PySide6.QtWidgets import (
+    QMainWindow, QApplication, QWidget, QLabel, QVBoxLayout,QPushButton, QLineEdit
+)
+from PySide6.QtGui import QPixmap, QIcon, QMovie
+from PySide6.QtCore import QThread, QObject, Signal, QSize
+from src.window_extratos import Ui_MainWindow
+
+def resource_path(relative_path):
+    base_path = getattr(
+        sys,
+        '_MEIPASS',
+        os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
 class Arquivo:
     #Cada arquivo possui um banco
     def __init__(self):
         self.caminho = ''
 
-    def leitura_simples(self, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1")
+    def leitura_simples(self, pg = 'all', header = True) -> list[pd.DataFrame]:
+        if header == False:
+            return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1", pandas_options={'header': None})
+        
+        return tb.read_pdf(self.caminho, pages= pg, stream=True, 
+        encoding="ISO-8859-1")
 
-    def leitura_simples_pandas(self, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream=True,\
-            pandas_options={'header': None}, encoding="ISO-8859-1")
-
-    def leitura_custom(self, area_lida, pg = 'all'):
+    def leitura_custom(self, area_lida, pg = 'all', header = True) -> list[pd.DataFrame]:
+        if header == False:
+            return tb.read_pdf(self.caminho, pages= pg, stream= True,\
+                        relative_area=True, area= area_lida,\
+                            pandas_options={"header":None}, encoding="ISO-8859-1")
+        
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
                         relative_area=True, area= area_lida, encoding="ISO-8859-1")
     
-    def leitura_custom_pandas(self, area_lida, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream= True,\
-                        relative_area=True, area= area_lida,\
-                            pandas_options={"header":None}, encoding="ISO-8859-1")
-
     def leitura_excel(self):
         return pd.read_excel(self.caminho)
     
     def qnt_paginas(self):
         return len(PdfReader(self.caminho).pages)
 
-    def inserir(self, label):
-        try:
-            caminho = askopenfilename()
+    def set_caminho(self, caminho) -> str:
+        if caminho == '':
+            return None
+        self.caminho = self.caminho_valido(caminho)
+        return self.caminho[self.caminho.rfind('/') + 1:]
+    
+    def get_caminho(self) -> str:
+        return self.caminho[self.caminho.rfind('/') + 1:]
 
-            if caminho == '':
-                return None
-            
-            self.caminho = self.validar_entrada(caminho)
-
-            label['text'] = caminho[caminho.rfind('/') +1:]
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
-
-    def abrir(self,arquivo_final: pd.DataFrame):
-        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
-
-        if file == '':
-            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
-            if resp == True:
-                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
-                return None
-            else:
-                return self.abrir(arquivo_final)
-
-        arquivo_final.to_excel(file+'.xlsx', index=False)
-
-        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-
-        os.startfile(file+'.xlsx')
-
-    def __tipo(self, caminho):
+    def __tipo(self, caminho) -> str:
         return caminho[ len(caminho) -3 :].lower()
     
-    def validar_entrada(self, caminho):
+    def caminho_valido(self, caminho) -> str:
         if self.__tipo(caminho).lower() not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
 
@@ -84,15 +74,21 @@ class Arquivo:
         
         return caminho
 
-    def formato_ascii(self, caminho):
+    def formato_ascii(self, caminho) -> str:
         caminho_uni = unidecode(caminho)
         os.renames(caminho, caminho_uni)
         return caminho_uni
 
 class Banco:
+    __metaclass__ = ABCMeta
+
     def __init__(self):
         self.formatos_disp = []
         self.titulo = ''
+
+    @abstractmethod
+    def gerar_extrato(self, arquivo) -> pd.DataFrame:
+        raise NotImplementedError("Implemente este método")
 
     def filt_colunas(self,arquivo, colunas):
         for tabelas in arquivo:
@@ -140,7 +136,7 @@ class Banco:
 
         self.df.insert(col,'Inf.',coluna_inf)
 
-    def to_string(self):
+    def to_string(self) -> str:
         return self.titulo
     #Cada banco possui uma gerar_extrato próprio!!
 
@@ -149,7 +145,7 @@ class Caixa(Banco):
         super().__init__()
         self.titulo = 'Caixa'
 
-    def gerar_extrato(self, arquivo):
+    def gerar_extrato(self, arquivo: Arquivo):
         self.filt_colunas(arquivo.leitura_simples(),["Data Mov.", "", "Histórico",'', "Valor"])
         self.inserir_espacos()
         self.col_inf()
@@ -165,11 +161,11 @@ class BancoDoBrasil(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom_pandas(area_lida=[25,0,100,100], pg=1)
+        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,100], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom_pandas\
-                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100])
+            arquivo_complt = arquivo.leitura_custom\
+                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100], header= False)
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -257,8 +253,8 @@ class Sicoob(Banco):
             tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)
 
         if ver_incolor == True:
-            arquivo_complt = arquivo.leitura_custom_pandas(
-                area_lida=[3,0,95,100], pg=f'2-{qnt_pages}')
+            arquivo_complt = arquivo.leitura_custom(
+                area_lida=[3,0,95,100], pg=f'2-{qnt_pages}', header=False)
         else:
             arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
             
@@ -283,13 +279,14 @@ class Sicoob(Banco):
         self.df = self.df[self.df['Inf.'] != '']
 
 class IColorido():
-    def extrato(self, arquivo):
+    def extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom_pandas(area_lida=[27,0,90,100], pg=1)
+        tabela1 = arquivo.leitura_custom(area_lida=[27,0,90,100], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom_pandas(area_lida=[25,0,90,100], pg=f'2-{qnt_pages}')
+            arquivo_complt = arquivo.leitura_custom(
+                area_lida=[25,0,90,100], pg=f'2-{qnt_pages}', header=False)
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -319,9 +316,9 @@ class IColorido():
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
 class IClassico():
-    def extrato(self, arquivo):
+    def extrato(self, arquivo: Arquivo):
         self.filt_colunas(
-            arquivo.leitura_custom_pandas(area_lida= [0,0,100,77]),["Data", "Valor"])
+            arquivo.leitura_custom(area_lida= [0,0,100,77], header=False),["Data", "Valor"])
         self.__inserir_espacos()
         self.col_inf_sinal()
         self.__col_data()
@@ -363,8 +360,8 @@ class Inter(Banco, IClassico, IColorido):
         super().__init__()
         self.titulo = 'Inter'
 
-    def tipo(self, arquivo):
-        arquivo_teste = arquivo.leitura_custom_pandas(area_lida=[0,0,100,77], pg=1)
+    def tipo(self, arquivo: Arquivo):
+        arquivo_teste = arquivo.leitura_custom(area_lida=[0,0,100,77], pg=1, header=False)
         arquivo_teste[0].fillna('', inplace=True)
 
         if arquivo_teste[0].iloc[0,0] == '':
@@ -522,8 +519,13 @@ class Bradesco(Banco):
         self.df = self.df[self.df.Valor != '']
         self.df = self.df[self.df.Data.apply(lambda x: x[0].isnumeric())]
 
-class App:
-    def __init__(self):
+class MainWindow(QMainWindow, Ui_MainWindow):
+    PLCHR_COMBOBOX = 'Selecione a opção'
+
+    def __init__(self, parent = None) -> None:
+        super().__init__(parent)
+        self.setupUi(self)
+
         self.ref = {
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
@@ -538,98 +540,42 @@ class App:
             'bradesco': Bradesco()
         }
 
-        self.window = window
         self.arquivo = Arquivo()
-        self.tela()
-        self.index()
-        window.mainloop()
 
-    def tela(self):
-        self.window.configure(background='darkblue')
-        self.window.resizable(False,False)
-        self.window.geometry('860x500')
-        self.window.iconbitmap(self.resource_path('imgs\\extr-icon.ico'))
-        self.window.title('Conversor de Extrato')
+        self.setWindowIcon(QIcon(resource_path('src\\imgs\\extr-icon.ico')))
+        self.setWindowTitle('Conversor de Extrato')
 
-    def resource_path(self,relative_path):
-        base_path = getattr(
-            sys,
-            '_MEIPASS',
-            os.path.dirname(os.path.abspath(__file__)))
-        return os.path.join(base_path, relative_path)
+        self.movie = QMovie(resource_path("src\\imgs\\load.gif"))
+        self.label_load.setMovie(self.movie)
 
-    def index(self):
-        self.index = Frame(self.window, bd=4, bg='lightblue')
-        self.index.place(relx=0.05,rely=0.05,relwidth=0.9,relheight=0.9)
-
-        #Titulo
-        Label(self.index, text='Conversor de Extrato', background='lightblue', font=('arial',30,'bold')).place(relx=0.23,rely=0.25,relheight=0.15)
+        icon = QIcon()
+        icon.addFile(resource_path("src\\imgs\\upload-icon.png"), QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton_upload.setIcon(icon)
 
         #Logo
-        self.logo = PhotoImage(file=self.resource_path('imgs\\extrato_horizontal.png'))
+        self.logo_hori.setPixmap(QPixmap
+        (resource_path('src\\imgs\\extrato_horizontal.png')))
         
-        self.logo = self.logo.subsample(3,3)
+        self.pushButton_upload.clicked.connect( 
+            self.inserir
+        )
+
+        self.pushButton_executar.clicked.connect(
+            self.executar
+        )
         
-        Label(self.window, image=self.logo, background='lightblue')\
-            .place(relx=0.15,rely=0.1,relwidth=0.7,relheight=0.2)
-
-        #Labels e Entrys
-        ###########Arquivo
-        Label(self.index, text='Insira aqui o arquivo:',\
-            background='lightblue', font=(10))\
-                .place(relx=0.15,rely=0.45)
-
-        self.nome_arq = ''
-        self.arqLabel = Label(self.index)
-        self.arqLabel.config(font=("Arial", 8, 'bold italic'))
-        self.arqLabel.place(relx=0.21,rely=0.52,relwidth=0.7, relheight=0.055)
-        
-        Button(self.index, text='Enviar',\
-            command= lambda: self.arquivo.inserir(self.arqLabel))\
-                .place(relx=0.15,rely=0.52,relwidth=0.06,relheight=0.055)
-
-        ###########Banco
-        Label(self.index, text='Caso o nome do banco não constar no nome do arquivo',\
-                    background='lightblue', font=("Arial", 12, 'bold italic'))\
-                        .place(relx=0.15,rely=0.7)
-
-        Label(self.index, text='Escolha o banco emissor:',\
-            background='lightblue', font=(10))\
-                .place(relx=0.15,rely=0.75)
-        
-        self.bancoEntry = StringVar()
-
-        self.bancoEntryOpt = ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Pago", "Bradesco"]
-
-        self.bancoEntry.set('Escolha aqui')
-
-        self.popup = OptionMenu(self.index, self.bancoEntry, *self.bancoEntryOpt)\
-            .place(relx=0.4,rely=0.75,relwidth=0.2,relheight=0.06)
-        
-        #Botão enviar
-        Button(self.index, text='Gerar Extrato',\
-            command= lambda: self.executar())\
-                .place(relx=0.65,rely=0.8,relwidth=0.25,relheight=0.12)
-
-    def obj_banco(self):
-        if self.bancoEntry.get() != 'Escolha aqui':
-            for key, obj in self.ref.items():
-                if key in self.bancoEntry.get().lower():
-                    return obj
-        else:
-            nome_arq = self.arqLabel['text']
-            for chave, obj in self.ref.items():
-                if chave in nome_arq.lower():
-                    return obj
-            raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
+        self.comboBox.setPlaceholderText(self.PLCHR_COMBOBOX)
+        self.comboBox.addItems(
+             ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Pago", "Bradesco"]
+        )
 
     def executar(self):
         try:       
-            banco = self.obj_banco()
+            banco = self.banco_desejado()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
-            self.arquivo.abrir(arquivo_final)
+            self.abrir(arquivo_final)
          
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
@@ -641,5 +587,50 @@ class App:
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
-       
-App()
+
+    def banco_desejado(self) -> Banco:
+        if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
+            for key, obj in self.ref.items():
+                if key in self.comboBox.currentText().lower():
+                    return obj
+        else:
+            nome_arq = self.arquivo.get_caminho().lower()
+            for chave, obj in self.ref.items():
+                if chave in nome_arq:
+                    return obj
+        raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
+
+    def inserir(self):
+        try:
+            caminho = self.arquivo.set_caminho(askopenfilename())
+            if caminho != None:
+                self.pushButton_upload.setText(caminho)
+                self.pushButton_upload.setIcon(QPixmap(''))
+
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'O arquivo selecionado apresenta-se em aberto em outra janela, favor fecha-la')
+        except FileExistsError:
+            messagebox.showerror(title='Aviso', message= 'O arquivo selecionado já apresenta uma versão sem acento, favor usar tal versão ou apagar uma delas')
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error)
+
+    def abrir(self, arquivo_final: pd.DataFrame):
+        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
+
+        if file == '':
+            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
+            if resp == True:
+                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
+                return None
+            else:
+                return self.abrir(arquivo_final)
+
+        arquivo_final.to_excel(file+'.xlsx', index=False)
+        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+        os.startfile(file+'.xlsx')
+
+if __name__ == '__main__':
+    app = QApplication()
+    window = MainWindow()
+    window.show()
+    app.exec()
