@@ -688,7 +688,7 @@ if __name__ == '__main__':
     print(relacoes)
     db.exit()
 
-    # app = QApplication()
-    # window = MainWindow()
-    # window.show()
-    # app.exec()
+    app = QApplication()
+    window = MainWindow()
+    window.show()
+    app.exec()
