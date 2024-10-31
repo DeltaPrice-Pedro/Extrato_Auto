@@ -29,22 +29,22 @@ class Arquivo:
     def __init__(self):
         self.caminho = ''
 
-    def leitura_simples(self, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1")
+    def leitura_simples(self, pg = 'all', header = True) -> list[pd.DataFrame]:
+        if header == False:
+            return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1", pandas_options={'header': None})
+        
+        return tb.read_pdf(self.caminho, pages= pg, stream=True, 
+        encoding="ISO-8859-1")
 
-    def leitura_simples_pandas(self, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream=True,\
-            pandas_options={'header': None}, encoding="ISO-8859-1")
-
-    def leitura_custom(self, area_lida, pg = 'all'):
+    def leitura_custom(self, area_lida, pg = 'all', header = True) -> list[pd.DataFrame]:
+        if header == False:
+            return tb.read_pdf(self.caminho, pages= pg, stream= True,\
+                        relative_area=True, area= area_lida,\
+                            pandas_options={"header":None}, encoding="ISO-8859-1")
+        
         return tb.read_pdf(self.caminho, pages= pg, stream= True,\
                         relative_area=True, area= area_lida, encoding="ISO-8859-1")
     
-    def leitura_custom_pandas(self, area_lida, pg = 'all'):
-        return tb.read_pdf(self.caminho, pages= pg, stream= True,\
-                        relative_area=True, area= area_lida,\
-                            pandas_options={"header":None}, encoding="ISO-8859-1")
-
     def leitura_excel(self):
         return pd.read_excel(self.caminho)
     
@@ -54,16 +54,16 @@ class Arquivo:
     def set_caminho(self, caminho) -> str:
         if caminho == '':
             return None
-        self.caminho = self.validar_entrada(caminho)
+        self.caminho = self.caminho_valido(caminho)
         return self.caminho[self.caminho.rfind('/') + 1:]
     
     def get_caminho(self) -> str:
         return self.caminho[self.caminho.rfind('/') + 1:]
 
-    def __tipo(self, caminho):
+    def __tipo(self, caminho) -> str:
         return caminho[ len(caminho) -3 :].lower()
     
-    def validar_entrada(self, caminho):
+    def caminho_valido(self, caminho) -> str:
         if self.__tipo(caminho).lower() not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
 
@@ -74,7 +74,7 @@ class Arquivo:
         
         return caminho
 
-    def formato_ascii(self, caminho):
+    def formato_ascii(self, caminho) -> str:
         caminho_uni = unidecode(caminho)
         os.renames(caminho, caminho_uni)
         return caminho_uni
@@ -136,7 +136,7 @@ class Banco:
 
         self.df.insert(col,'Inf.',coluna_inf)
 
-    def to_string(self):
+    def to_string(self) -> str:
         return self.titulo
     #Cada banco possui uma gerar_extrato próprio!!
 
@@ -145,7 +145,7 @@ class Caixa(Banco):
         super().__init__()
         self.titulo = 'Caixa'
 
-    def gerar_extrato(self, arquivo):
+    def gerar_extrato(self, arquivo: Arquivo):
         self.filt_colunas(arquivo.leitura_simples(),["Data Mov.", "", "Histórico",'', "Valor"])
         self.inserir_espacos()
         self.col_inf()
@@ -161,11 +161,11 @@ class BancoDoBrasil(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom_pandas(area_lida=[25,0,100,100], pg=1)
+        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,100], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom_pandas\
-                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100])
+            arquivo_complt = arquivo.leitura_custom\
+                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100], header= False)
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -253,8 +253,8 @@ class Sicoob(Banco):
             tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)
 
         if ver_incolor == True:
-            arquivo_complt = arquivo.leitura_custom_pandas(
-                area_lida=[3,0,95,100], pg=f'2-{qnt_pages}')
+            arquivo_complt = arquivo.leitura_custom(
+                area_lida=[3,0,95,100], pg=f'2-{qnt_pages}', header=False)
         else:
             arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
             
@@ -279,13 +279,14 @@ class Sicoob(Banco):
         self.df = self.df[self.df['Inf.'] != '']
 
 class IColorido():
-    def extrato(self, arquivo):
+    def extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom_pandas(area_lida=[27,0,90,100], pg=1)
+        tabela1 = arquivo.leitura_custom(area_lida=[27,0,90,100], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom_pandas(area_lida=[25,0,90,100], pg=f'2-{qnt_pages}')
+            arquivo_complt = arquivo.leitura_custom(
+                area_lida=[25,0,90,100], pg=f'2-{qnt_pages}', header=False)
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -315,9 +316,9 @@ class IColorido():
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
 class IClassico():
-    def extrato(self, arquivo):
+    def extrato(self, arquivo: Arquivo):
         self.filt_colunas(
-            arquivo.leitura_custom_pandas(area_lida= [0,0,100,77]),["Data", "Valor"])
+            arquivo.leitura_custom(area_lida= [0,0,100,77], header=False),["Data", "Valor"])
         self.__inserir_espacos()
         self.col_inf_sinal()
         self.__col_data()
@@ -359,8 +360,8 @@ class Inter(Banco, IClassico, IColorido):
         super().__init__()
         self.titulo = 'Inter'
 
-    def tipo(self, arquivo):
-        arquivo_teste = arquivo.leitura_custom_pandas(area_lida=[0,0,100,77], pg=1)
+    def tipo(self, arquivo: Arquivo):
+        arquivo_teste = arquivo.leitura_custom(area_lida=[0,0,100,77], pg=1, header=False)
         arquivo_teste[0].fillna('', inplace=True)
 
         if arquivo_teste[0].iloc[0,0] == '':
@@ -570,7 +571,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def executar(self):
         try:       
-            banco = self.identifica_banco()
+            banco = self.banco_desejado()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
 
@@ -587,7 +588,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
 
-    def identifica_banco(self) -> Banco:
+    def banco_desejado(self) -> Banco:
         if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
             for key, obj in self.ref.items():
                 if key in self.comboBox.currentText().lower():
