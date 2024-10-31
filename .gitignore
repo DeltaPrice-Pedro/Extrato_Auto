@@ -1,5 +1,7 @@
 /venv
 /build
 /dist
+/code/src/__pycache__
 *.spec
 *.xlsx
+*~
