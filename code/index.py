@@ -6,7 +6,7 @@ from PyPDF2 import PdfReader
 import tabula as tb
 import pandas as pd
 import subprocess
-import string
+import sqlite3
 import sys
 import os
 
@@ -23,6 +23,53 @@ def resource_path(relative_path):
         '_MEIPASS',
         os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
+
+class DataBase:
+    NOME_DB = 'prog_contabil.sqlite3'
+    ARQUIVO_DB = resource_path(f'src\\db\\{NOME_DB}')
+    TABELA_BANCO = 'Banco'
+    TABELA_RELACAO = 'Relacao'
+    TABELA_EMP = 'Empresa'
+
+    def __init__(self) -> None:
+        self.query_id_banco = 'SELECT id_banco FROM {0} WHERE nome = "{1}"'
+
+        self.query_id_nome_emp = 'SELECT id_empresa, nome  FROM {0} WHERE id_banco = "{1}"'
+
+        self.query_codEmp_keyBanco =  'SELECT codigo_emp, chave_banco FROM {0} WHERE id_banco = "{1}" AND id_empresa = "{2}"'
+
+
+        self.connection = sqlite3.connect(self.ARQUIVO_DB)
+        self.cursor = self.connection.cursor()
+        pass
+
+    def clientes_do_banco(self, id_banco: int) -> dict[int, str]:
+        self.cursor.execute(
+            self.query_id_nome_emp.format(
+                self.TABELA_EMP, id_banco
+            )
+        )
+        return { id: nome for id, nome in self.cursor.fetchall() }
+
+    def id_banco(self, nome:str) -> int:
+        self.cursor.execute(
+            self.query_id_banco.format(self.TABELA_BANCO, nome)
+        )
+        return self.cursor.fetchone()[0]
+    
+    def relacoes(self, id_banco: int, id_empresa: int) -> dict[int, str]:
+        self.cursor.execute(
+           self.query_codEmp_keyBanco.format(
+               self.TABELA_RELACAO, id_banco, id_empresa
+           )
+        )
+        return { 
+            id_emp: key_banco for id_emp, key_banco in self.cursor.fetchall()
+        }
+
+    def exit(self):
+        self.cursor.close()
+        self.connection.close()
 
 class Arquivo:
     #Cada arquivo possui um banco
@@ -630,7 +677,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         os.startfile(file+'.xlsx')
 
 if __name__ == '__main__':
-    app = QApplication()
-    window = MainWindow()
-    window.show()
-    app.exec()
+    db = DataBase()
+    id_banco = db.id_banco('Caixa')
+    print(id_banco)
+
+    empresas_disp = db.clientes_do_banco(id_banco)
+    print(empresas_disp)
+
+    relacoes = db.relacoes(id_banco, 1)
+    print(relacoes)
+    db.exit()
+
+    # app = QApplication()
+    # window = MainWindow()
+    # window.show()
+    # app.exec()
