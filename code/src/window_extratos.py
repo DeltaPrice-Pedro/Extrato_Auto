@@ -128,12 +128,12 @@ class Ui_MainWindow(object):
         self.scrollArea.setObjectName(u"scrollArea")
         self.scrollArea.setEnabled(False)
         self.scrollArea.setWidgetResizable(True)
-        self.scrollAreaWidgetContents_2 = QWidget()
-        self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 333, 69))
-        self.verticalLayout_2 = QVBoxLayout(self.scrollAreaWidgetContents_2)
+        self.scrollAreaLayout = QWidget()
+        self.scrollAreaLayout.setObjectName(u"scrollAreaLayout")
+        self.scrollAreaLayout.setGeometry(QRect(0, 0, 249, 69))
+        self.verticalLayout_2 = QVBoxLayout(self.scrollAreaLayout)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.label_aviso = QLabel(self.scrollAreaWidgetContents_2)
+        self.label_aviso = QLabel(self.scrollAreaLayout)
         self.label_aviso.setObjectName(u"label_aviso")
         font3 = QFont()
         font3.setFamilies([u"Rockwell"])
@@ -146,7 +146,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addWidget(self.label_aviso)
 
-        self.scrollArea.setWidget(self.scrollAreaWidgetContents_2)
+        self.scrollArea.setWidget(self.scrollAreaLayout)
 
         self.gridLayout_2.addWidget(self.scrollArea, 3, 0, 1, 1)
 

@@ -196,12 +196,12 @@
             <property name="widgetResizable">
              <bool>true</bool>
             </property>
-            <widget class="QWidget" name="scrollAreaWidgetContents_2">
+            <widget class="QWidget" name="scrollAreaLayout">
              <property name="geometry">
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>333</width>
+               <width>249</width>
                <height>69</height>
               </rect>
              </property>

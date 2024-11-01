@@ -6,12 +6,12 @@ from PyPDF2 import PdfReader
 import tabula as tb
 import pandas as pd
 import subprocess
-import string
+import sqlite3
 import sys
 import os
 
 from PySide6.QtWidgets import (
-    QMainWindow, QApplication, QWidget, QLabel, QVBoxLayout,QPushButton, QLineEdit
+    QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget
 )
 from PySide6.QtGui import QPixmap, QIcon, QMovie
 from PySide6.QtCore import QThread, QObject, Signal, QSize
@@ -23,6 +23,53 @@ def resource_path(relative_path):
         '_MEIPASS',
         os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base_path, relative_path)
+
+class DataBase:
+    NOME_DB = 'prog_contabil.sqlite3'
+    ARQUIVO_DB = resource_path(f'src\\db\\{NOME_DB}')
+    TABELA_BANCO = 'Banco'
+    TABELA_RELACAO = 'Relacao'
+    TABELA_EMP = 'Empresa'
+
+    def __init__(self) -> None:
+        self.query_id_banco = 'SELECT id_banco FROM {0} WHERE nome = "{1}"'
+
+        self.query_id_nome_emp = 'SELECT id_empresa, nome  FROM {0} WHERE id_banco = "{1}"'
+
+        self.query_codEmp_keyBanco =  'SELECT codigo_emp, chave_banco FROM {0} WHERE id_banco = "{1}" AND id_empresa = "{2}"'
+
+
+        self.connection = sqlite3.connect(self.ARQUIVO_DB)
+        self.cursor = self.connection.cursor()
+        pass
+
+    def clientes_do_banco(self, id_banco: int) -> dict[int, str]:
+        self.cursor.execute(
+            self.query_id_nome_emp.format(
+                self.TABELA_EMP, id_banco
+            )
+        )
+        return { id: nome for id, nome in self.cursor.fetchall() }
+
+    def id_banco(self, nome:str) -> int:
+        self.cursor.execute(
+            self.query_id_banco.format(self.TABELA_BANCO, nome)
+        )
+        return self.cursor.fetchone()[0]
+    
+    def relacoes(self, id_banco: int, id_empresa: int) -> dict[int, str]:
+        self.cursor.execute(
+           self.query_codEmp_keyBanco.format(
+               self.TABELA_RELACAO, id_banco, id_empresa
+           )
+        )
+        return { 
+            id_emp: key_banco for id_emp, key_banco in self.cursor.fetchall()
+        }
+
+    def exit(self):
+        self.cursor.close()
+        self.connection.close()
 
 class Arquivo:
     #Cada arquivo possui um banco
@@ -526,6 +573,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.db = DataBase()
+        self.id_banco = -1
+        self.options = {}
         self.ref = {
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
@@ -555,6 +605,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #Logo
         self.logo_hori.setPixmap(QPixmap
         (resource_path('src\\imgs\\extrato_horizontal.png')))
+
+        self.comboBox.currentTextChanged.connect(
+            self.pesquisar_empresas
+        )
         
         self.pushButton_upload.clicked.connect( 
             self.inserir
@@ -571,9 +625,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def executar(self):
         try:       
+            id_emp = self.option_escolhida()
+            if self.id_banco == -1:
+                raise Exception('Escolha um banco e uma empresa, caso a que deseja não esteja disponível, marque "Não Encontrado"')
+
             banco = self.banco_desejado()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
+
+            if id_emp != -1:
+                relacoes = self.db.relacoes(self.id_banco, id_emp)
+                arquivo_final = self.prog_contabil(arquivo_final, relacoes)
 
             self.abrir(arquivo_final)
          
@@ -587,6 +649,61 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
+
+    def prog_contabil(self, arquivo_final: pd.DataFrame, relacoes: dict [int, str]):
+        arquivo_novo = arquivo_final.copy(True)
+
+        for index, row in arquivo_novo.iterrows():
+            if row['Inf.'] == 'C':
+                row['Cód. Conta Débito'] = self.id_banco
+            else:
+                row['Cód. Conta Crédito'] = self.id_banco
+
+            for id_emp, key_banco in relacoes.items():
+                if key_banco in row['Histórico']:
+                    if  row['Cód. Conta Débito'] == '':
+                        row['Cód. Conta Débito'] = id_emp
+                    else:
+                        row['Cód. Conta Crédito'] = id_emp
+                    continue
+
+        return arquivo_novo
+
+    def pesquisar_empresas(self):
+        if self.scrollArea.isEnabled() == False:
+            self.scrollArea.setDisabled(False)
+            self.label_aviso.hide()
+            self.vbox = QVBoxLayout()
+        else:
+            self.widget.destroy()
+            for widget in self.options.values():
+                self.vbox.removeWidget(widget)
+                widget.destroy()
+
+        self.widget = QWidget()
+
+        self.add_options()
+
+        self.widget.setLayout(self.vbox)
+        self.scrollArea.setWidget(self.widget)
+
+    def add_options(self):
+        self.id_banco = self.db.id_banco(self.comboBox.currentText())
+        empresas_disp = self.db.clientes_do_banco(self.id_banco)
+
+        self.options.clear()
+        self.options[-1] = QRadioButton('Não Encontrado')
+        self.vbox.addWidget(self.options[-1])
+        
+        for id_emp, nome_emp in empresas_disp.items():
+            self.options[id_emp] = QRadioButton(nome_emp)
+            self.vbox.addWidget(self.options[id_emp])
+
+    def option_escolhida(self) -> int:
+        for id_emp, widget in self.options.items():
+            if widget.isChecked():
+                return id_emp
+        return -1
 
     def banco_desejado(self) -> Banco:
         if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
