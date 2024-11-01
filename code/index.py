@@ -747,15 +747,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         os.startfile(file+'.xlsx')
 
 if __name__ == '__main__':
-    # id_banco = db.id_banco('Caixa')
-    # print(id_banco)
-
-    # empresas_disp = db.clientes_do_banco(id_banco)
-    # print(empresas_disp)
-
-    # relacoes = db.relacoes(id_banco, 1)
-    # print(relacoes)
-    # db.exit()
     app = QApplication()
     window = MainWindow()
     window.show()
