@@ -574,6 +574,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.db = DataBase()
+        self.id_banco = -1
         self.options = {}
         self.ref = {
             'caixa': Caixa(),
@@ -624,9 +625,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def executar(self):
         try:       
+            id_emp = self.option_escolhida()
+            if self.id_banco == -1:
+                raise Exception('Escolha um banco e uma empresa, caso a que deseja não esteja disponível, marque "Não Encontrado"')
+
             banco = self.banco_desejado()
 
             arquivo_final = banco.gerar_extrato(self.arquivo)
+
+            if id_emp != -1:
+                relacoes = self.db.relacoes(self.id_banco, id_emp)
+                arquivo_final = self.prog_contabil(arquivo_final, relacoes)
 
             self.abrir(arquivo_final)
          
@@ -641,6 +650,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
 
+    def prog_contabil(self, arquivo_final: pd.DataFrame, relacoes: dict [int, str]):
+        arquivo_novo = arquivo_final.copy(True)
+
+        for index, row in arquivo_novo.iterrows():
+            if row['Inf.'] == 'C':
+                row['Cód. Conta Débito'] = self.id_banco
+            else:
+                row['Cód. Conta Crédito'] = self.id_banco
+
+            for id_emp, key_banco in relacoes.items():
+                if key_banco in row['Histórico']:
+                    if  row['Cód. Conta Débito'] == '':
+                        row['Cód. Conta Débito'] = id_emp
+                    else:
+                        row['Cód. Conta Crédito'] = id_emp
+                    continue
+
+        return arquivo_novo
+
     def pesquisar_empresas(self):
         if self.scrollArea.isEnabled() == False:
             self.scrollArea.setDisabled(False)
@@ -648,7 +676,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.vbox = QVBoxLayout()
         else:
             self.widget.destroy()
-            for index, widget in self.options.items():
+            for widget in self.options.values():
                 self.vbox.removeWidget(widget)
                 widget.destroy()
 
@@ -660,8 +688,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.scrollArea.setWidget(self.widget)
 
     def add_options(self):
-        id_banco = self.db.id_banco(self.comboBox.currentText())
-        empresas_disp = self.db.clientes_do_banco(id_banco)
+        self.id_banco = self.db.id_banco(self.comboBox.currentText())
+        empresas_disp = self.db.clientes_do_banco(self.id_banco)
 
         self.options.clear()
         self.options[-1] = QRadioButton('Não Encontrado')
@@ -670,6 +698,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         for id_emp, nome_emp in empresas_disp.items():
             self.options[id_emp] = QRadioButton(nome_emp)
             self.vbox.addWidget(self.options[id_emp])
+
+    def option_escolhida(self) -> int:
+        for id_emp, widget in self.options.items():
+            if widget.isChecked():
+                return id_emp
+        return -1
 
     def banco_desejado(self) -> Banco:
         if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
