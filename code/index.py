@@ -574,6 +574,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.db = DataBase()
+        self.options = {}
         self.ref = {
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
@@ -644,22 +645,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.scrollArea.isEnabled() == False:
             self.scrollArea.setDisabled(False)
             self.label_aviso.hide()
-            self.widget = QWidget()
             self.vbox = QVBoxLayout()
         else:
+            self.widget.destroy()
             for index, widget in self.options.items():
                 self.vbox.removeWidget(widget)
+                widget.destroy()
 
-        id_banco = self.db.id_banco(self.comboBox.currentText())
-        empresas_disp = self.db.clientes_do_banco(id_banco)
+        self.widget = QWidget()
 
-        self.options = {}
-        for id_emp, nome_emp in empresas_disp.items():
-            self.options[id_emp] = QRadioButton(nome_emp)
-            self.vbox.addWidget(self.options[id_emp])
+        self.add_options()
 
         self.widget.setLayout(self.vbox)
         self.scrollArea.setWidget(self.widget)
+
+    def add_options(self):
+        id_banco = self.db.id_banco(self.comboBox.currentText())
+        empresas_disp = self.db.clientes_do_banco(id_banco)
+
+        self.options.clear()
+        self.options[-1] = QRadioButton('Não Encontrado')
+        self.vbox.addWidget(self.options[-1])
+        
+        for id_emp, nome_emp in empresas_disp.items():
+            self.options[id_emp] = QRadioButton(nome_emp)
+            self.vbox.addWidget(self.options[id_emp])
 
     def banco_desejado(self) -> Banco:
         if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
