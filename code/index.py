@@ -11,7 +11,7 @@ import sys
 import os
 
 from PySide6.QtWidgets import (
-    QMainWindow, QApplication, QWidget, QLabel, QVBoxLayout,QPushButton, QLineEdit
+    QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget
 )
 from PySide6.QtGui import QPixmap, QIcon, QMovie
 from PySide6.QtCore import QThread, QObject, Signal, QSize
@@ -573,6 +573,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super().__init__(parent)
         self.setupUi(self)
 
+        self.db = DataBase()
         self.ref = {
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
@@ -602,6 +603,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #Logo
         self.logo_hori.setPixmap(QPixmap
         (resource_path('src\\imgs\\extrato_horizontal.png')))
+
+        self.comboBox.currentTextChanged.connect(
+            self.pesquisar_empresas
+        )
         
         self.pushButton_upload.clicked.connect( 
             self.inserir
@@ -634,6 +639,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
+
+    def pesquisar_empresas(self):
+        if self.scrollArea.isEnabled() == False:
+            self.scrollArea.setDisabled(False)
+            self.label_aviso.hide()
+            self.widget = QWidget()
+            self.vbox = QVBoxLayout()
+        else:
+            for index, widget in self.options.items():
+                self.vbox.removeWidget(widget)
+
+        id_banco = self.db.id_banco(self.comboBox.currentText())
+        empresas_disp = self.db.clientes_do_banco(id_banco)
+
+        self.options = {}
+        for id_emp, nome_emp in empresas_disp.items():
+            self.options[id_emp] = QRadioButton(nome_emp)
+            self.vbox.addWidget(self.options[id_emp])
+
+        self.widget.setLayout(self.vbox)
+        self.scrollArea.setWidget(self.widget)
 
     def banco_desejado(self) -> Banco:
         if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
@@ -677,17 +703,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         os.startfile(file+'.xlsx')
 
 if __name__ == '__main__':
-    db = DataBase()
-    id_banco = db.id_banco('Caixa')
-    print(id_banco)
+    # id_banco = db.id_banco('Caixa')
+    # print(id_banco)
 
-    empresas_disp = db.clientes_do_banco(id_banco)
-    print(empresas_disp)
+    # empresas_disp = db.clientes_do_banco(id_banco)
+    # print(empresas_disp)
 
-    relacoes = db.relacoes(id_banco, 1)
-    print(relacoes)
-    db.exit()
-
+    # relacoes = db.relacoes(id_banco, 1)
+    # print(relacoes)
+    # db.exit()
     app = QApplication()
     window = MainWindow()
     window.show()
