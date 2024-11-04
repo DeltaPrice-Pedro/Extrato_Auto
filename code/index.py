@@ -566,6 +566,61 @@ class Bradesco(Banco):
         self.df = self.df[self.df.Valor != '']
         self.df = self.df[self.df.Data.apply(lambda x: x[0].isnumeric())]
 
+class Gerador(QObject):
+    inicio = Signal(bool)
+    fim = Signal(bool)
+
+    def __init__(self, banco: Banco, arquivo: Arquivo, id_banco: int, relacoes: dict[int, str]) -> None:
+        super().__init__()
+        self.banco = banco
+        self.arquivo = arquivo
+        self.id_banco = id_banco
+        self.relacoes = relacoes
+
+    def extrato(self):
+        self.inicio.emit(True)
+        self.arquivo_final = self.banco.gerar_extrato(self.arquivo)
+
+        if self.relacoes != []:
+            arquivo_final = self.prog_contabil()
+
+        self.abrir(arquivo_final)
+        self.fim.emit(False)
+
+    def prog_contabil(self):
+        arquivo_novo = self.arquivo_final.copy(True)
+
+        for index, row in arquivo_novo.iterrows():
+            if row['Inf.'] == 'C':
+                row['Cód. Conta Débito'] = self.id_banco
+            else:
+                row['Cód. Conta Crédito'] = self.id_banco
+
+            for id_emp, key_banco in self.relacoes.items():
+                if key_banco in str(row['Histórico']).lower():
+                    if  row['Cód. Conta Débito'] == '':
+                        row['Cód. Conta Débito'] = id_emp
+                    else:
+                        row['Cód. Conta Crédito'] = id_emp
+                    continue
+
+        return arquivo_novo
+    
+    def abrir(self, arquivo_final: pd.DataFrame):
+        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
+
+        if file == '':
+            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
+            if resp == True:
+                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
+                return None
+            else:
+                return self.abrir(arquivo_final)
+
+        arquivo_final.to_excel(file+'.xlsx', index=False)
+        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+        os.startfile(file+'.xlsx')
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     PLCHR_COMBOBOX = 'Selecione a opção'
 
@@ -631,14 +686,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             banco = self.banco_desejado()
 
-            arquivo_final = banco.gerar_extrato(self.arquivo)
-
             if id_emp != -1:
                 relacoes = self.db.relacoes(self.id_banco, id_emp)
-                arquivo_final = self.prog_contabil(arquivo_final, relacoes)
 
-            self.abrir(arquivo_final)
-         
+            self._gerador = Gerador(
+                banco,
+                self.arquivo,
+                self.id_banco,
+                relacoes
+            )
+            self._thread = QThread()
+
+            self._gerador.moveToThread(self._thread)
+            self._thread.started.connect(self._gerador.extrato)
+            self._gerador.fim.connect(self._thread.quit)
+            self._gerador.fim.connect(self._thread.deleteLater)
+            self._gerador.fim.connect(self.alter_estado)
+            self._gerador.inicio.connect(self.alter_estado)
+            
+            self._thread.finished.connect(self._gerador.deleteLater)
+            self._thread.start() 
+
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
         except UnboundLocalError:
@@ -650,24 +718,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
 
-    def prog_contabil(self, arquivo_final: pd.DataFrame, relacoes: dict [int, str]):
-        arquivo_novo = arquivo_final.copy(True)
+    def alter_estado(self, cond: bool):
+        self.exec_load(cond)
+        self.pushButton_executar.setDisabled(cond)
 
-        for index, row in arquivo_novo.iterrows():
-            if row['Inf.'] == 'C':
-                row['Cód. Conta Débito'] = self.id_banco
-            else:
-                row['Cód. Conta Crédito'] = self.id_banco
-
-            for id_emp, key_banco in relacoes.items():
-                if key_banco in str(row['Histórico']).lower():
-                    if  row['Cód. Conta Débito'] == '':
-                        row['Cód. Conta Débito'] = id_emp
-                    else:
-                        row['Cód. Conta Crédito'] = id_emp
-                    continue
-
-        return arquivo_novo
+    def exec_load(self, action: bool):
+        if action == True:
+            self.movie.start()
+            self.stackedWidget.setCurrentIndex(1)
+        else:
+            self.movie.stop()
+            self.stackedWidget.setCurrentIndex(0)
 
     def pesquisar_empresas(self):
         if self.scrollArea.isEnabled() == False:
@@ -730,21 +791,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= 'O arquivo selecionado já apresenta uma versão sem acento, favor usar tal versão ou apagar uma delas')
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
-
-    def abrir(self, arquivo_final: pd.DataFrame):
-        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
-
-        if file == '':
-            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
-            if resp == True:
-                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
-                return None
-            else:
-                return self.abrir(arquivo_final)
-
-        arquivo_final.to_excel(file+'.xlsx', index=False)
-        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-        os.startfile(file+'.xlsx')
 
 if __name__ == '__main__':
     app = QApplication()
