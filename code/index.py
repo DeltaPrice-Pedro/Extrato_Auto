@@ -660,7 +660,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 row['Cód. Conta Crédito'] = self.id_banco
 
             for id_emp, key_banco in relacoes.items():
-                if key_banco in row['Histórico']:
+                if key_banco in str(row['Histórico']).lower():
                     if  row['Cód. Conta Débito'] == '':
                         row['Cód. Conta Débito'] = id_emp
                     else:
