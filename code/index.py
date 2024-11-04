@@ -208,16 +208,15 @@ class BancoDoBrasil(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,100], pg=1, header=False)
+        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,90], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom\
-                (pg=f'2-{qnt_pages}',area_lida=[0,0,100,100], header= False)
+            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
             
         arquivo_complt.insert(0,tabela1[0])
 
         self.filt_colunas(arquivo_complt, \
-            ["Data", "", "Histórico", "", "Valor R$", ""])
+            ["Data", "Histórico", "", "", "Valor R$", ""])
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
@@ -227,6 +226,7 @@ class BancoDoBrasil(Banco):
     def __filt_linhas(self):
         self.df.fillna(0.0, inplace=True)
         for index, row in self.df.iterrows():
+            self.df.loc[[index],['Data']] = str(row['Data'])[:10]
             if row['Data'] == 0.0:
                 linhaAcima = self.df.iloc[index - 1]
                 self.df.loc[[index - 1],['Histórico']] =\
@@ -497,11 +497,11 @@ class Bradesco(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[26,0,100,100], pg=1)
+        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,80], pg=1)
         
         if qnt_pages > 1:
             arquivo_complt = arquivo.leitura_custom(pg=f'2-{qnt_pages}',\
-                area_lida=[10,0,100,100])
+                area_lida=[8,0,100,100])
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -514,11 +514,11 @@ class Bradesco(Banco):
         return self.df
 
     def __filtro_colunas(self, arquivo):
-        for index, self.df in enumerate(arquivo):
-            if len(self.df.columns) != 6:
-                arquivo.pop(index)
+        for tabelas in arquivo:
+            if len(tabelas.columns) != 6:
+                tabelas.columns = ["Data", "Histórico", "Crédito", "Débito", ""]
                 continue 
-            self.df.columns = ["Data", "Histórico", "", "Crédito", "Débito", ""]
+            tabelas.columns = ["Data", "Histórico", "", "Crédito", "Débito"]
 
         self.df = pd.concat(arquivo, ignore_index=True)
         self.df = self.df.drop('', axis=1)
@@ -579,16 +579,16 @@ class Gerador(QObject):
 
     def extrato(self):
         self.inicio.emit(True)
-        self.arquivo_final = self.banco.gerar_extrato(self.arquivo)
+        arquivo_final = self.banco.gerar_extrato(self.arquivo)
 
-        if self.relacoes != []:
-            arquivo_final = self.prog_contabil()
+        if self.relacoes != {}:
+            arquivo_final = self.prog_contabil(arquivo_final)
 
         self.abrir(arquivo_final)
         self.fim.emit(False)
 
-    def prog_contabil(self):
-        arquivo_novo = self.arquivo_final.copy(True)
+    def prog_contabil(self, arquivo_final: pd.DataFrame):
+        arquivo_novo = arquivo_final.copy(True)
 
         for index, row in arquivo_novo.iterrows():
             if row['Inf.'] == 'C':
@@ -679,15 +679,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
     def executar(self):
-        try:       
+        # try:       
             id_emp = self.option_escolhida()
             if self.id_banco == -1:
                 raise Exception('Escolha um banco e uma empresa, caso a que deseja não esteja disponível, marque "Não Encontrado"')
 
             banco = self.banco_desejado()
-
-            if id_emp != -1:
-                relacoes = self.db.relacoes(self.id_banco, id_emp)
+            relacoes = self.db.relacoes(self.id_banco, id_emp)
 
             self._gerador = Gerador(
                 banco,
@@ -707,16 +705,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._thread.finished.connect(self._gerador.deleteLater)
             self._thread.start() 
 
-        except PermissionError:
-            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        except Exception as error:
-            messagebox.showerror(title='Aviso', message= error)
+        # except PermissionError:
+        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        # except UnboundLocalError:
+        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        # except subprocess.CalledProcessError:
+        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        # except FileNotFoundError:
+        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        # except Exception as error:
+        #     messagebox.showerror(title='Aviso', message= error)
+        # finally:
+        #     self.alter_estado(False)
 
     def alter_estado(self, cond: bool):
         self.exec_load(cond)
