@@ -2,6 +2,7 @@
 /code/src/__pycache__
 /build
 /dist
+/code/src/__pycache__
 *.spec
 *.xlsx
 *~
