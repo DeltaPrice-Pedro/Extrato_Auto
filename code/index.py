@@ -293,11 +293,14 @@ class Sicoob(Banco):
 
     def opcao_completa(self, arquivo: Arquivo, qnt_pages: int) -> list[pd.DataFrame]:
         ver_incolor = False
-        tabela1 = arquivo.leitura_custom(area_lida=[13,0,100,100], pg=1)
+        tabela1 = arquivo.leitura_custom(area_lida=[15,0,100,94], pg=1)[0]
         
-        if tabela1[0].iloc[0,1] == 'Lançamentos':
+        if tabela1.iloc[0,1] == 'Lançamentos':
             ver_incolor = True
-            tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)
+            tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)[0]
+        else:
+            tabela1.columns = ["Data", "Excluir", "Histórico","", "Valor"]
+            tabela1 = tabela1.drop('', axis=1)
 
         if ver_incolor == True:
             arquivo_complt = arquivo.leitura_custom(
@@ -305,7 +308,7 @@ class Sicoob(Banco):
         else:
             arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
             
-        arquivo_complt.insert(0,tabela1[0])
+        arquivo_complt.insert(0,tabela1)
         return arquivo_complt
 
     def __filt_linhas(self):
