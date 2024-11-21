@@ -715,7 +715,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
     def executar(self):
-        # try:       
+        try:       
             id_emp = self.option_escolhida()
             if self.id_banco == -1:
                 raise Exception('Escolha um banco e uma empresa, caso a que deseja não esteja disponível, marque "Não Encontrado"')
@@ -741,18 +741,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._thread.finished.connect(self._gerador.deleteLater)
             self._thread.start() 
 
-        # except PermissionError:
-        #     messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-        # except UnboundLocalError:
-        #     messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-        # except subprocess.CalledProcessError:
-        #     messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-        # except FileNotFoundError:
-        #     messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-        # except Exception as error:
-        #     messagebox.showerror(title='Aviso', message= error)
-        # finally:
-        #     self.alter_estado(False)
+        except PermissionError:
+            messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+        except UnboundLocalError:
+            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+        except subprocess.CalledProcessError:
+            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+        except FileNotFoundError:
+            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+        except Exception as error:
+            messagebox.showerror(title='Aviso', message= error)
+        finally:
+            self.alter_estado(False)
 
     def alter_estado(self, cond: bool):
         self.exec_load(cond)
