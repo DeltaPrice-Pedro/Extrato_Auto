@@ -5,11 +5,10 @@ from tkinter import messagebox
 from PyPDF2 import PdfReader
 import tabula as tb
 import pandas as pd
-import subprocess
-import traceback
-import sqlite3
+from traceback import print_exc
+from sqlite3 import connect
 import sys
-import os
+from os import renames, startfile, path
 
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget
@@ -17,13 +16,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QPixmap, QIcon, QMovie
 from PySide6.QtCore import QThread, QObject, Signal, QSize
 from src.window_extratos import Ui_MainWindow
-
+#TODO IMPORT
 def resource_path(relative_path):
     base_path = getattr(
         sys,
         '_MEIPASS',
-        os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base_path, relative_path)
+        path.dirname(path.abspath(__file__)))
+    return path.join(base_path, relative_path)
 
 class DataBase:
     NOME_DB = 'prog_contabil.sqlite3'
@@ -40,7 +39,7 @@ class DataBase:
         self.query_codEmp_keyBanco =  'SELECT codigo_emp, chave_banco FROM {0} WHERE id_banco = "{1}" AND id_empresa = "{2}"'
 
 
-        self.connection = sqlite3.connect(self.ARQUIVO_DB)
+        self.connection = connect(self.ARQUIVO_DB)
         self.cursor = self.connection.cursor()
         pass
 
@@ -124,7 +123,7 @@ class Arquivo:
 
     def formato_ascii(self, caminho) -> str:
         caminho_uni = unidecode(caminho)
-        os.renames(caminho, caminho_uni)
+        renames(caminho, caminho_uni)
         return caminho_uni
 
 class Banco:
@@ -691,7 +690,7 @@ class Gerador(QObject):
             self.fim.emit(False)
 
         except Exception as error:
-            traceback.print_exc()
+            print_exc()
             messagebox.showerror(title='Aviso', message= f"Erro ao extrair a tabela: confira se o banco foi selecionado corretamente, caso contrário, comunique o desenvolvedor \n\n- erro do tipo: {error}")
         finally:
             self.fim.emit(False)
@@ -728,7 +727,7 @@ class Gerador(QObject):
 
         arquivo_final.to_excel(file+'.xlsx', index=False)
         messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-        os.startfile(file+'.xlsx')
+        startfile(file+'.xlsx')
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     PLCHR_COMBOBOX = 'Selecione a opção'
