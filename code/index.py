@@ -689,10 +689,10 @@ class Gerador(QObject):
 
             self.abrir(arquivo_final)
             self.fim.emit(False)
-            
+
         except Exception as error:
             traceback.print_exc()
-            messagebox.showerror(title='Aviso', message= f"Erro ao extrair a tabela: confira se o banco foi selecionado corretamente, caso contrário, comunique o desenvolvedor \n\n erro do tipo: {error}")
+            messagebox.showerror(title='Aviso', message= f"Erro ao extrair a tabela: confira se o banco foi selecionado corretamente, caso contrário, comunique o desenvolvedor \n\n- erro do tipo: {error}")
         finally:
             self.fim.emit(False)
 
