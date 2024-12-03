@@ -453,7 +453,7 @@ class IDecorado_Itau:
 
         arquivos = []
         if arquivo.qnt_paginas() > 2:
-            arquivos = self.ler_extensao()
+            arquivos = self.ler_extensao(arquivo)
 
         arquivos.insert(0,tabela1)
         
@@ -479,8 +479,8 @@ class IDecorado_Itau:
                 baixo = baixo - 10
                 arquivos = arquivor.leitura_custom([10,20,baixo,80], i)[0]
 
-                if arquivos.iloc[0,3] == '(débitos)':
-                    arquivo.append(arquivos)
+            if arquivos.iloc[0,3] == '(débitos)':
+                arquivo.append(arquivos)
         return arquivo
     
     def __juntar_valores(self):
@@ -499,23 +499,23 @@ class IDecorado_Itau:
             else:
                 data_atual = row['Data Mov.']
 
-class Itau(Banco):
+class Itau(Banco, IDecorado_Itau, IClassico_Itau):
     def __init__(self):
         super().__init__()
         self.titulo = 'Itau'
 
     def tipo(self, arquivo: Arquivo):
-        arquivo_teste = arquivo.leitura_custom(area_lida=[0,0,100,77], pg=1, header=False)
-        arquivo_teste[0].fillna('', inplace=True)
+        arquivo_teste = arquivo.leitura_custom(area_lida=[0,0,100,100], pg=1)[0]
+        arquivo_teste.fillna('', inplace=True)
 
-        if arquivo_teste[0].iloc[0,0] == '':
+        if arquivo_teste.iloc[0,0] == '':
             return True
         return False
 
     def gerar_extrato(self, arquivo):
         if self.tipo(arquivo) == True:
-            return IColorido_Inter.extrato(self, arquivo)
-        return IClassico_Inter.extrato(self, arquivo)
+            return IDecorado_Itau.extrato(self, arquivo)
+        return IClassico_Itau.extrato(self, arquivo)
 
 class MercadoPago(Banco):
     def __init__(self):
@@ -809,15 +809,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
+            self.alter_estado(False)
         except UnboundLocalError:
             messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
+            self.alter_estado(False)
         except subprocess.CalledProcessError:
             messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
+            self.alter_estado(False)
         except FileNotFoundError:
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+            self.alter_estado(False)
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
-        finally:
             self.alter_estado(False)
 
     def alter_estado(self, cond: bool):
