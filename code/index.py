@@ -6,6 +6,7 @@ from PyPDF2 import PdfReader
 import tabula as tb
 import pandas as pd
 import subprocess
+import traceback
 import sqlite3
 import sys
 import os
@@ -679,14 +680,21 @@ class Gerador(QObject):
         self.relacoes = relacoes
 
     def extrato(self):
-        self.inicio.emit(True)
-        arquivo_final = self.banco.gerar_extrato(self.arquivo)
+        try:
+            self.inicio.emit(True)
+            arquivo_final = self.banco.gerar_extrato(self.arquivo)
 
-        if self.relacoes != {}:
-            arquivo_final = self.prog_contabil(arquivo_final)
+            if self.relacoes != {}:
+                arquivo_final = self.prog_contabil(arquivo_final)
 
-        self.abrir(arquivo_final)
-        self.fim.emit(False)
+            self.abrir(arquivo_final)
+            self.fim.emit(False)
+            
+        except Exception as error:
+            traceback.print_exc()
+            messagebox.showerror(title='Aviso', message= f"Erro ao extrair a tabela: confira se o banco foi selecionado corretamente, caso contrário, comunique o desenvolvedor \n\n erro do tipo: {error}")
+        finally:
+            self.fim.emit(False)
 
     def prog_contabil(self, arquivo_final: pd.DataFrame):
         arquivo_novo = arquivo_final.copy(True)
@@ -809,18 +817,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
-            self.alter_estado(False)
-        except UnboundLocalError:
-            messagebox.showerror(title='Aviso', message= 'Arquivo não compativel a esse banco')
-            self.alter_estado(False)
-        except subprocess.CalledProcessError:
-            messagebox.showerror(title='Aviso', message= "Erro ao extrair a tabela, confira se o banco foi selecionado corretamente. Caso contrário, comunique o desenvolvedor")
-            self.alter_estado(False)
         except FileNotFoundError:
             messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
-            self.alter_estado(False)
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
+        finally:
             self.alter_estado(False)
 
     def alter_estado(self, cond: bool):
