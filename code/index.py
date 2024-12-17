@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QPixmap, QIcon, QMovie
 from PySide6.QtCore import QThread, QObject, Signal, QSize
 from src.window_extratos import Ui_MainWindow
-#TODO IMPORT
+
 def resource_path(relative_path):
     base_path = getattr(
         sys,
@@ -299,15 +299,27 @@ class Sicoob(Banco):
             ver_incolor = True
             tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)[0]
         else:
-            tabela1.columns = ["Data", "Excluir", "Histórico","", "Valor"]
-            tabela1 = tabela1.drop('', axis=1)
+            if len(tabela1.columns) == 5:
+                tabela1.columns = ["Data", "Excluir", "Histórico","", "Valor"]
+            else:
+                tabela1.columns = ["Data", "Excluir", "Histórico", "Valor"]
+            tabela1 = tabela1.drop('', axis=1, errors='ignore')
 
         if ver_incolor == True:
             arquivo_complt = arquivo.leitura_custom(
                 area_lida=[3,0,95,100], pg=f'2-{qnt_pages}', header=False)
         else:
-            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
-            
+            arquivo_complt = arquivo.leitura_custom(area_lida=[0,0,100,100], pg=f'2-{qnt_pages - 1}', header=False)
+
+            index = 70
+            while True:
+                ultima_pagina = arquivo.leitura_custom(area_lida=[0,0,index,100], pg=f'{qnt_pages}', header=False)[0]
+                ultima_pagina.fillna('', inplace=True)
+                if ultima_pagina.iloc[len(ultima_pagina) - 1,3] != '':
+                    break
+                index = index - 10
+            arquivo_complt.append(ultima_pagina)
+                    
         arquivo_complt.insert(0,tabela1)
         return arquivo_complt
 
@@ -449,7 +461,7 @@ class IClassico_Itau:
 
 class IDecorado_Itau:
     def extrato(self, arquivo):
-        tabela1 = arquivo.leitura_custom(area_lida=[70,25,95,80], pg=1)[0]
+        tabela1 = arquivo.leitura_custom(area_lida=[70,25,98,80], pg=1)[0]
 
         arquivos = []
         if arquivo.qnt_paginas() > 2:
@@ -472,7 +484,7 @@ class IDecorado_Itau:
         arquivo = []
         for i in range(2, arquivor.qnt_paginas() - 1):
             print(i)
-            baixo = 95
+            baixo = 98
             arquivos = arquivor.leitura_custom([10,20,baixo,80], i)[0]
 
             while len(arquivos.columns) != 4 and baixo > 10:
