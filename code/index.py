@@ -462,11 +462,14 @@ class IClassico_Itau:
 class IDecorado_Itau:
     def extrato(self, arquivo):
         tabela1 = arquivo.leitura_custom(area_lida=[70,25,98,80], pg=1)[0]
+        pg = 1
 
-        arquivos = []
-        if arquivo.qnt_paginas() > 2:
-            arquivos = self.ler_extensao(arquivo)
+        #Mudar condição para o que diferencia o decorado do personalite
+        if len(tabela1.columns) != 4: 
+            tabela1 = self.ler_extensao(arquivo, 1, 3, 42)[0]
+            pg = 2  
 
+        arquivos = self.ler_extensao(arquivo, pg, pg)
         arquivos.insert(0,tabela1)
         
         self.filt_colunas(arquivos, ["Data Mov.", "Histórico", "Valor", "valor-temp"])
@@ -480,19 +483,19 @@ class IDecorado_Itau:
 
         return self.df
     
-    def ler_extensao(self, arquivor: Arquivo):
+    def ler_extensao(self, arquivor: Arquivo, pg_inicio: int, pg_fim: int, topo = 10):
         arquivo = []
-        for i in range(2, arquivor.qnt_paginas() - 1):
+        baixo = 98
+        for i in range(pg_inicio + 1, arquivor.qnt_paginas() - pg_fim):
             print(i)
-            baixo = 98
-            arquivos = arquivor.leitura_custom([10,20,baixo,80], i)[0]
-
-            while len(arquivos.columns) != 4 and baixo > 10:
-                baixo = baixo - 10
-                arquivos = arquivor.leitura_custom([10,20,baixo,80], i)[0]
-
-            if arquivos.iloc[0,3] == '(débitos)':
-                arquivo.append(arquivos)
+            for baixo in range(98, topo, -10):
+                arquivos = arquivor.leitura_custom([topo, 20, baixo, 80], i)[0]
+                arquivos = arquivos.loc[:, ~arquivos.columns.str.contains('^Unnamed')]
+                if len(arquivos.columns) == 4 and arquivos.iloc[0,3] == '(débitos)':
+                    break
+            if len(arquivos.columns) != 4:
+                break
+            arquivo.append(arquivos)
         return arquivo
     
     def __juntar_valores(self):
