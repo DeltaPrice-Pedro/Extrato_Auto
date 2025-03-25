@@ -212,7 +212,9 @@ class Caixa(Banco):
         tabela1 = arquivo.leitura_custom([30,0,95,80], '1', False)[0]
 
         if qnt_pages > 1:
-            arquivor = arquivo.leitura_custom([2,0,95,80], f'2-{qnt_pages - 1}', False)
+            arquivor = []
+            if qnt_pages - 1 > qnt_pages:
+                arquivor = arquivo.leitura_custom([2,0,95,80], f'2-{qnt_pages - 1}', False)
             
             for baixo in range(95, 2, -10):
                 ultima = arquivo.leitura_custom([2,0,baixo,80], qnt_pages)[0]
@@ -232,7 +234,7 @@ class BancoDoBrasil(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,90], pg=1, header=False)
+        tabela1 = arquivo.leitura_custom(area_lida=[25,0,98,90], pg=1, header=False)
         
         if qnt_pages > 1:
             arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
@@ -240,7 +242,7 @@ class BancoDoBrasil(Banco):
         arquivo_complt.insert(0,tabela1[0])
 
         self.filt_colunas(arquivo_complt, \
-            ["Data", "Histórico", "", "", "Valor R$", ""])
+            ["Data","","", "Histórico", "", "Valor R$", ""])
         self.inserir_espacos(valor= 'Valor R$')
         self.col_inf()
         self.__filt_linhas()
@@ -254,7 +256,7 @@ class BancoDoBrasil(Banco):
             if row['Data'] == 0.0:
                 linhaAcima = self.df.iloc[index - 1]
                 self.df.loc[[index - 1],['Histórico']] =\
-                    f"{str(linhaAcima['Histórico'])[10:]} ~ {str(row['Histórico'])}"
+                    f"{str(linhaAcima['Histórico'])[3:]} {str(row['Histórico'])}"
 
 class SantaFe(Banco):
     def __init__(self):
