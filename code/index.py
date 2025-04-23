@@ -271,10 +271,11 @@ class Sicoob(Banco):
     def gerar_extrato(self, arquivo: Arquivo):
         qnt_pages = arquivo.qnt_paginas()
         
-        if qnt_pages == 1:
-            arq_complt = self.opcao_simples(arquivo)
-        else:
-            arq_complt = self.opcao_completa(arquivo, qnt_pages)
+        # if qnt_pages == 1:
+        arq_complt = self.opcao_simples(arquivo, qnt_pages)
+        #Não sei se a opção completa ainda é necessária
+        # else:
+            # arq_complt = self.opcao_completa(arquivo, qnt_pages)
 
         self.filt_colunas(arq_complt, ["Data", "", "Histórico", "Valor"])
         self.inserir_espacos()
@@ -283,13 +284,31 @@ class Sicoob(Banco):
 
         return self.df
 
-    def opcao_simples(self, arquivo: Arquivo) -> list[pd.DataFrame]:
-        index = 100
-        tabela1 = arquivo.leitura_custom([13,0,75,100])
-        while len(tabela1[0].iloc[2,0]) > 10:
-            index = index - 10
-            tabela1 = arquivo.leitura_custom([13,0,index,100])
-        return tabela1
+    def opcao_simples(self, arquivo: Arquivo, qnt_pages: int) -> list[pd.DataFrame]:
+        # index = 100
+        # tabela1 = arquivo.leitura_custom([13,0,75,100])
+        # while len(tabela1[0].iloc[2,0]) > 10:
+        #     index = index - 10
+        #     tabela1 = arquivo.leitura_custom([13,0,index,100])
+        # return tabela1
+
+        table_cplt = []
+        table = arquivo.leitura_custom([19,0,95,100], pg=1)[0]
+        if qnt_pages == 1:
+            table.dropna(thresh=3, inplace = True)
+            na_col = table.pop("Unnamed: 0")
+            for index, row in table.iterrows():
+                value = row.values[0]
+                row.replace(value, value[:9], inplace= True)
+            table.insert(1, "", na_col)
+                            
+        else:
+            table_cplt = arquivo.leitura_custom(
+                [3,0,95,100], pg=f'2-{qnt_pages}'
+            ) 
+        
+        table_cplt.insert(0, table)
+        return table_cplt
 
     def opcao_completa(self, arquivo: Arquivo, qnt_pages: int) -> list[pd.DataFrame]:
         ver_incolor = False
