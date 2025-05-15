@@ -303,7 +303,7 @@ class Ui_MainWindow(object):
         font8.setPointSize(18)
         font8.setBold(False)
         self.label_extrato.setFont(font8)
-        self.label_extrato.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.label_extrato.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.verticalLayout_3.addWidget(self.label_extrato)
 
@@ -325,6 +325,13 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addWidget(self.pushButton_upload)
 
+        self.line = QFrame(self.frame_4)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.Shape.HLine)
+        self.line.setFrameShadow(QFrame.Shadow.Sunken)
+
+        self.verticalLayout_3.addWidget(self.line)
+
         self.frame_3 = QFrame(self.frame_4)
         self.frame_3.setObjectName(u"frame_3")
         self.frame_3.setFrameShape(QFrame.Shape.StyledPanel)
@@ -336,7 +343,7 @@ class Ui_MainWindow(object):
         self.pushButton_executar.setObjectName(u"pushButton_executar")
         sizePolicy4.setHeightForWidth(self.pushButton_executar.sizePolicy().hasHeightForWidth())
         self.pushButton_executar.setSizePolicy(sizePolicy4)
-        self.pushButton_executar.setMinimumSize(QSize(150, 50))
+        self.pushButton_executar.setMinimumSize(QSize(175, 50))
         font10 = QFont()
         font10.setFamilies([u"Bahnschrift"])
         font10.setPointSize(14)

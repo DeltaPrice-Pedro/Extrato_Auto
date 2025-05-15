@@ -477,7 +477,7 @@
                 <string>Insira o Extrato</string>
                </property>
                <property name="alignment">
-                <set>Qt::AlignmentFlag::AlignCenter</set>
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
                </property>
               </widget>
              </item>
@@ -507,6 +507,13 @@
                  <width>65</width>
                  <height>63</height>
                 </size>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line">
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
                </property>
               </widget>
              </item>
@@ -541,7 +548,7 @@
                   </property>
                   <property name="minimumSize">
                    <size>
-                    <width>150</width>
+                    <width>175</width>
                     <height>50</height>
                    </size>
                   </property>
