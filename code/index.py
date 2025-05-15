@@ -1,132 +1,136 @@
-from tkinter.filedialog import askopenfilename, asksaveasfilename
-from abc import abstractmethod, ABCMeta
-from unidecode import unidecode
-from tkinter import messagebox
-from PyPDF2 import PdfReader
-import tabula as tb
-import pandas as pd
-from traceback import print_exc
-from sqlite3 import connect
-import sys
-from os import renames, startfile, path
-
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget
 )
-from PySide6.QtGui import QPixmap, QIcon, QMovie
+from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PySide6.QtCore import QThread, QObject, Signal, QSize
+from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt
 from src.window_extratos import Ui_MainWindow
+from os import renames, startfile, getenv
+from abc import abstractmethod, ABCMeta
+from traceback import print_exc
+from unidecode import unidecode
+from tkinter import messagebox
+from dotenv import load_dotenv
+from PyPDF2 import PdfReader
+from pymysql import connect
+from pathlib import Path
+import tabula as tb
+import pandas as pd
+import sys
 
-def resource_path(relative_path):
-    base_path = getattr(
-        sys,
-        '_MEIPASS',
-        path.dirname(path.abspath(__file__)))
-    return path.join(base_path, relative_path)
+load_dotenv(Path(__file__).parent / 'src' / 'env' / '.env')
 
 class DataBase:
-    NOME_DB = 'prog_contabil.sqlite3'
-    ARQUIVO_DB = resource_path(f'src\\db\\{NOME_DB}')
-    TABELA_BANCO = 'Banco'
-    TABELA_RELACAO = 'Relacao'
-    TABELA_EMP = 'Empresa'
+    COMPANIE_TABLE = 'Companie'
+    BANK_TABLE = 'Bank'
+    REFERENCE_TABLE = 'Reference'
 
     def __init__(self) -> None:
-        self.query_id_banco = 'SELECT id_banco FROM {0} WHERE nome = "{1}"'
+        self.connection = connect(
+                host= getenv('IP_HOST'),
+                port= int(getenv('PORT_HOST')),
+                user= getenv('USER'),
+                password= getenv('PASSWORD'),
+                database= getenv('DB'),
+            )
 
-        self.query_id_nome_emp = 'SELECT id_empresa, nome  FROM {0} WHERE id_banco = "{1}"'
+        self.query_bank = (
+            f'SELECT id_bank, name, code FROM {self.BANK_TABLE};'
+        )
 
-        self.query_codEmp_keyBanco =  'SELECT codigo_emp, chave_banco FROM {0} WHERE id_banco = "{1}" AND id_empresa = "{2}"'
+        self.query_companie = (
+            f'SELECT id_companie, name FROM {self.COMPANIE_TABLE} '
+            'WHERE id_bank = %s;'
+        )
 
+        self.query_reference =  (
+            f'SELECT key, value FROM {self.REFERENCE_TABLE} '
+            'WHERE id_bank = %s AND id_companie = %s;'
+        )
 
-        self.connection = connect(self.ARQUIVO_DB)
-        self.cursor = self.connection.cursor()
         pass
 
-    def clientes_do_banco(self, id_banco: int) -> dict[int, str]:
-        self.cursor.execute(
-            self.query_id_nome_emp.format(
-                self.TABELA_EMP, id_banco
+    def companie(self, id_bank: int) -> dict[int, str]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                self.query_companie,
+                (id_bank,)
             )
-        )
-        return { id: nome for id, nome in self.cursor.fetchall() }
+        return { id: nome for id, nome in cursor.fetchall() }
 
-    def id_banco(self, nome:str) -> int:
-        self.cursor.execute(
-            self.query_id_banco.format(self.TABELA_BANCO, nome)
-        )
-        return self.cursor.fetchone()[0]
+    def bank(self) -> dict[str, int]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                self.query_bank,
+            )
+        return { id: f'{name} - {code}' for id, name, code in cursor.fetchall() }
     
-    def relacoes(self, id_banco: int, id_empresa: int) -> dict[int, str]:
-        self.cursor.execute(
-           self.query_codEmp_keyBanco.format(
-               self.TABELA_RELACAO, id_banco, id_empresa
-           )
-        )
+    def reference(self, id_bank: int, id_companie: int) -> dict[int, str]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                self.query_reference,
+                (id_bank, id_companie)
+            )
         return { 
-            id_emp: key_banco for id_emp, key_banco in self.cursor.fetchall()
+            key: value for key, value in cursor.fetchall()
         }
 
-    def exit(self):
-        self.cursor.close()
-        self.connection.close()
-
-class Arquivo:
+class File:
     #Cada arquivo possui um banco
     def __init__(self):
-        self.caminho = ''
+        self.path = ''
 
-    def leitura_simples(self, pg = 'all', header = True) -> list[pd.DataFrame]:
+    def simple_read(self, pg = 'all', header = True) -> list[pd.DataFrame]:
         if header == False:
-            return tb.read_pdf(self.caminho, pages= pg, stream=True, encoding="ISO-8859-1", pandas_options={'header': None})
+            return tb.read_pdf(self.path, pages= pg, stream=True, encoding="ISO-8859-1", pandas_options={'header': None})
         
-        return tb.read_pdf(self.caminho, pages= pg, stream=True, 
+        return tb.read_pdf(self.path, pages= pg, stream=True, 
         encoding="ISO-8859-1")
 
-    def leitura_custom(self, area_lida, pg = 'all', header = True) -> list[pd.DataFrame]:
+    def custom_read(self, area_lida, pg = 'all', header = True) -> list[pd.DataFrame]:
         if header == False:
-            return tb.read_pdf(self.caminho, pages= pg, stream= True,\
+            return tb.read_pdf(self.path, pages= pg, stream= True,\
                         relative_area=True, area= area_lida,\
                             pandas_options={"header":None}, encoding="ISO-8859-1")
         
-        return tb.read_pdf(self.caminho, pages= pg, stream= True,\
+        return tb.read_pdf(self.path, pages= pg, stream= True,\
                         relative_area=True, area= area_lida, encoding="ISO-8859-1")
     
-    def leitura_excel(self):
-        return pd.read_excel(self.caminho)
+    def excel_read(self):
+        return pd.read_excel(self.path)
     
-    def qnt_paginas(self):
-        return len(PdfReader(self.caminho).pages)
+    def lenght(self):
+        return len(PdfReader(self.path).pages)
 
-    def set_caminho(self, caminho) -> str:
+    def set_path(self, caminho) -> str:
         if caminho == '':
             return None
-        self.caminho = self.caminho_valido(caminho)
-        return self.caminho[self.caminho.rfind('/') + 1:]
+        self.path = self.valided_path(caminho)
+        return self.path[self.path.rfind('/') + 1:]
     
-    def get_caminho(self) -> str:
-        return self.caminho[self.caminho.rfind('/') + 1:]
+    def get_path(self) -> str:
+        return self.path[self.path.rfind('/') + 1:]
 
-    def __tipo(self, caminho) -> str:
+    def __type(self, caminho) -> str:
         return caminho[ len(caminho) -3 :].lower()
     
-    def caminho_valido(self, caminho) -> str:
-        if self.__tipo(caminho).lower() not in ['pdf', 'lsx']:
+    def valided_path(self, caminho) -> str:
+        if self.__type(caminho).lower() not in ['pdf', 'lsx']:
             raise Exception('Formato de arquivo inválido')
 
-        caminho_acsii = self.formato_ascii(caminho)
+        caminho_acsii = self.__ascii(caminho)
         if caminho != caminho_acsii:
             caminho = caminho_acsii
             messagebox.showinfo(title='Aviso', message='O caminho do arquivo precisou ser mudado, para encontrá-lo novamente siga o caminho a seguir: \n' + caminho)
         
         return caminho
 
-    def formato_ascii(self, caminho) -> str:
+    def __ascii(self, caminho) -> str:
         caminho_uni = unidecode(caminho)
         renames(caminho, caminho_uni)
         return caminho_uni
 
-class Banco:
+class Bank:
     __metaclass__ = ABCMeta
 
     def __init__(self):
@@ -187,18 +191,18 @@ class Banco:
         return self.titulo
     #Cada banco possui uma gerar_extrato próprio!!
 
-class Caixa(Banco):
+class Caixa(Bank):
     def __init__(self):
         super().__init__()
         self.titulo = 'Caixa'
 
-    def gerar_extrato(self, arquivo: Arquivo):
-        arquivor = arquivo.leitura_simples()[0]
+    def gerar_extrato(self, arquivo: File):
+        arquivor = arquivo.simple_read()[0]
         arquivor.fillna(0.0, inplace=True)
         if arquivor.iloc[0,0] == 0.0:
             self.filt_colunas(self.leitura_alternativa(arquivo),["Data Mov.", "", "Histórico", "Valor"])
         else:
-            self.filt_colunas(arquivo.leitura_simples(),["Data Mov.", "", "Histórico", "", "Valor"])
+            self.filt_colunas(arquivo.simple_read(),["Data Mov.", "", "Histórico", "", "Valor"])
         self.inserir_espacos()
         self.col_inf()
 
@@ -207,17 +211,17 @@ class Caixa(Banco):
             return self.df.loc[self.df['Histórico'] != 'SALDO DIA']
         return self.df.loc[self.df['Histórico'] != 0.0]
 
-    def leitura_alternativa(self, arquivo: Arquivo) -> list[pd.DataFrame]:
-        qnt_pages = arquivo.qnt_paginas()
-        tabela1 = arquivo.leitura_custom([30,0,95,80], '1', False)[0]
+    def leitura_alternativa(self, arquivo: File) -> list[pd.DataFrame]:
+        qnt_pages = arquivo.lenght()
+        tabela1 = arquivo.custom_read([30,0,95,80], '1', False)[0]
 
         if qnt_pages > 1:
             arquivor = []
             if qnt_pages - 1 > qnt_pages:
-                arquivor = arquivo.leitura_custom([2,0,95,80], f'2-{qnt_pages - 1}', False)
+                arquivor = arquivo.custom_read([2,0,95,80], f'2-{qnt_pages - 1}', False)
             
             for baixo in range(95, 2, -10):
-                ultima = arquivo.leitura_custom([2,0,baixo,80], qnt_pages)[0]
+                ultima = arquivo.custom_read([2,0,baixo,80], qnt_pages)[0]
                 ultima.fillna(0.0, inplace=True)
                 if ultima.iloc[len(ultima) - 1, 3] != 0.0:
                     break
@@ -226,18 +230,18 @@ class Caixa(Banco):
         arquivor.insert(0,tabela1)
         return arquivor
 
-class BancoDoBrasil(Banco):
+class BancoDoBrasil(Bank):
     def __init__(self):
         super().__init__()
         self.titulo = 'Banco do Brasil'
 
-    def gerar_extrato(self, arquivo: Arquivo):
-        qnt_pages = arquivo.qnt_paginas()
+    def gerar_extrato(self, arquivo: File):
+        qnt_pages = arquivo.lenght()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[25,0,98,90], pg=1, header=False)
+        tabela1 = arquivo.custom_read(area_lida=[25,0,98,90], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+            arquivo_complt = arquivo.simple_read(pg=f'2-{qnt_pages}')
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -258,7 +262,7 @@ class BancoDoBrasil(Banco):
                 self.df.loc[[index - 1],['Histórico']] =\
                     f"{str(linhaAcima['Histórico'])[3:]} {str(row['Histórico'])}"
 
-class SantaFe(Banco):
+class SantaFe(Bank):
     def __init__(self):
         super().__init__()
         self.titulo = 'Santa Fé'
@@ -281,7 +285,7 @@ class SantaFe(Banco):
 
         self.df = self.df.drop([0,1,2,len(self.df)-1]).reset_index(drop=True)
 
-class Sicoob(Banco):
+class Sicoob(Bank):
     def __init__(self):
      super().__init__()
      self.titulo = 'Sicoob'
@@ -294,8 +298,8 @@ class Sicoob(Banco):
         #senao retorna a função com Index -1
         return self.buscarLinhaPai(index - 1, tabela)
 
-    def gerar_extrato(self, arquivo: Arquivo):
-        qnt_pages = arquivo.qnt_paginas()
+    def gerar_extrato(self, arquivo: File):
+        qnt_pages = arquivo.lenght()
         
         # if qnt_pages == 1:
         arq_complt = self.opcao_simples(arquivo, qnt_pages)
@@ -310,7 +314,7 @@ class Sicoob(Banco):
 
         return self.df
 
-    def opcao_simples(self, arquivo: Arquivo, qnt_pages: int) -> list[pd.DataFrame]:
+    def opcao_simples(self, arquivo: File, qnt_pages: int) -> list[pd.DataFrame]:
         # index = 100
         # tabela1 = arquivo.leitura_custom([13,0,75,100])
         # while len(tabela1[0].iloc[2,0]) > 10:
@@ -319,7 +323,7 @@ class Sicoob(Banco):
         # return tabela1
 
         table_cplt = []
-        table = arquivo.leitura_custom([19,0,95,100], pg=1)[0]
+        table = arquivo.custom_read([19,0,95,100], pg=1)[0]
         if qnt_pages == 1:
             table.dropna(thresh=3, inplace = True)
             na_col = table.pop("Unnamed: 0")
@@ -329,20 +333,20 @@ class Sicoob(Banco):
             table.insert(1, "", na_col)
                             
         else:
-            table_cplt = arquivo.leitura_custom(
+            table_cplt = arquivo.custom_read(
                 [3,0,95,100], pg=f'2-{qnt_pages}'
             ) 
         
         table_cplt.insert(0, table)
         return table_cplt
 
-    def opcao_completa(self, arquivo: Arquivo, qnt_pages: int) -> list[pd.DataFrame]:
+    def opcao_completa(self, arquivo: File, qnt_pages: int) -> list[pd.DataFrame]:
         ver_incolor = False
-        tabela1 = arquivo.leitura_custom(area_lida=[15,0,100,94], pg=1)[0]
+        tabela1 = arquivo.custom_read(area_lida=[15,0,100,94], pg=1)[0]
         
         if tabela1.iloc[0,1] == 'Lançamentos':
             ver_incolor = True
-            tabela1 = arquivo.leitura_custom(area_lida=[18,0,95,100], pg=1)[0]
+            tabela1 = arquivo.custom_read(area_lida=[18,0,95,100], pg=1)[0]
         else:
             if len(tabela1.columns) == 5:
                 tabela1.columns = ["Data", "Excluir", "Histórico","", "Valor"]
@@ -351,14 +355,14 @@ class Sicoob(Banco):
             tabela1 = tabela1.drop('', axis=1, errors='ignore')
 
         if ver_incolor == True:
-            arquivo_complt = arquivo.leitura_custom(
+            arquivo_complt = arquivo.custom_read(
                 area_lida=[3,0,95,100], pg=f'2-{qnt_pages}', header=False)
         else:
-            arquivo_complt = arquivo.leitura_custom(area_lida=[0,0,100,100], pg=f'2-{qnt_pages - 1}', header=False)
+            arquivo_complt = arquivo.custom_read(area_lida=[0,0,100,100], pg=f'2-{qnt_pages - 1}', header=False)
 
             index = 70
             while True:
-                ultima_pagina = arquivo.leitura_custom(area_lida=[0,0,index,100], pg=f'{qnt_pages}', header=False)[0]
+                ultima_pagina = arquivo.custom_read(area_lida=[0,0,index,100], pg=f'{qnt_pages}', header=False)[0]
                 ultima_pagina.fillna('', inplace=True)
                 if ultima_pagina.iloc[len(ultima_pagina) - 1,3] != '':
                     break
@@ -386,13 +390,13 @@ class Sicoob(Banco):
         self.df = self.df[self.df['Inf.'] != '']
 
 class IColorido_Inter():
-    def extrato(self, arquivo: Arquivo):
-        qnt_pages = arquivo.qnt_paginas()
+    def extrato(self, arquivo: File):
+        qnt_pages = arquivo.lenght()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[27,0,90,100], pg=1, header=False)
+        tabela1 = arquivo.custom_read(area_lida=[27,0,90,100], pg=1, header=False)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom(
+            arquivo_complt = arquivo.custom_read(
                 area_lida=[25,0,90,100], pg=f'2-{qnt_pages}', header=False)
             
         arquivo_complt.insert(0,tabela1[0])
@@ -423,9 +427,9 @@ class IColorido_Inter():
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
 class IClassico_Inter():
-    def extrato(self, arquivo: Arquivo):
+    def extrato(self, arquivo: File):
         self.filt_colunas(
-            arquivo.leitura_custom(area_lida= [0,0,100,77], header=False),["Data", "Valor"])
+            arquivo.custom_read(area_lida= [0,0,100,77], header=False),["Data", "Valor"])
         self.__inserir_espacos()
         self.col_inf_sinal()
         self.__col_data()
@@ -462,13 +466,13 @@ class IClassico_Inter():
 
         self.df.insert(0,'Data',coluna_data) 
 
-class Inter(Banco, IClassico_Inter, IColorido_Inter):
+class Inter(Bank, IClassico_Inter, IColorido_Inter):
     def __init__(self):
         super().__init__()
         self.titulo = 'Inter'
 
-    def tipo(self, arquivo: Arquivo):
-        arquivo_teste = arquivo.leitura_custom(area_lida=[0,0,100,77], pg=1, header=False)
+    def tipo(self, arquivo: File):
+        arquivo_teste = arquivo.custom_read(area_lida=[0,0,100,77], pg=1, header=False)
         arquivo_teste[0].fillna('', inplace=True)
 
         if arquivo_teste[0].iloc[0,0] == '':
@@ -528,13 +532,13 @@ class IDecorado_Itau:
 
         return self.df
     
-    def ler_extensao(self, arquivor: Arquivo, pg_inicio: int, pg_fim: int, topo = 10):
+    def ler_extensao(self, arquivor: File, pg_inicio: int, pg_fim: int, topo = 10):
         arquivo = []
         baixo = 98
-        for i in range(pg_inicio + 1, arquivor.qnt_paginas() - pg_fim):
+        for i in range(pg_inicio + 1, arquivor.lenght() - pg_fim):
             print(i)
             for baixo in range(98, topo, -10):
-                arquivos = arquivor.leitura_custom([topo, 20, baixo, 80], i)[0]
+                arquivos = arquivor.custom_read([topo, 20, baixo, 80], i)[0]
                 arquivos = arquivos.loc[:, ~arquivos.columns.str.contains('^Unnamed')]
                 if len(arquivos.columns) == 4 and arquivos.iloc[0,3] == '(débitos)':
                     break
@@ -559,13 +563,13 @@ class IDecorado_Itau:
             else:
                 data_atual = row['Data Mov.']
 
-class Itau(Banco, IDecorado_Itau, IClassico_Itau):
+class Itau(Bank, IDecorado_Itau, IClassico_Itau):
     def __init__(self):
         super().__init__()
         self.titulo = 'Itau'
 
-    def tipo(self, arquivo: Arquivo):
-        arquivo_teste = arquivo.leitura_custom(area_lida=[0,0,100,100], pg=1)[0]
+    def tipo(self, arquivo: File):
+        arquivo_teste = arquivo.custom_read(area_lida=[0,0,100,100], pg=1)[0]
         arquivo_teste.fillna('', inplace=True)
 
         if arquivo_teste.iloc[0,0] == '':
@@ -577,18 +581,18 @@ class Itau(Banco, IDecorado_Itau, IClassico_Itau):
             return IDecorado_Itau.extrato(self, arquivo)
         return IClassico_Itau.extrato(self, arquivo)
 
-class MercadoPago(Banco):
+class MercadoPago(Bank):
     def __init__(self):
         super().__init__()
         self.titulo = 'Mercado Pago'
 
-    def gerar_extrato(self, arquivo: Arquivo):
-        qnt_pages = arquivo.qnt_paginas()
+    def gerar_extrato(self, arquivo: File):
+        qnt_pages = arquivo.lenght()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[27,0,100,100], pg=1)
+        tabela1 = arquivo.custom_read(area_lida=[27,0,100,100], pg=1)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_simples(pg=f'2-{qnt_pages}')
+            arquivo_complt = arquivo.simple_read(pg=f'2-{qnt_pages}')
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -618,18 +622,18 @@ class MercadoPago(Banco):
         lista_tabelas.append(self.df.loc[self.df['Data'] != ''])
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
-class Bradesco(Banco):
+class Bradesco(Bank):
     def __init__(self):
         super().__init__()
         self.titulo = 'Bradesco'
 
-    def gerar_extrato(self, arquivo: Arquivo):
-        qnt_pages = arquivo.qnt_paginas()
+    def gerar_extrato(self, arquivo: File):
+        qnt_pages = arquivo.lenght()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[25,0,100,80], pg=1)
+        tabela1 = arquivo.custom_read(area_lida=[25,0,100,80], pg=1)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom(pg=f'2-{qnt_pages}',\
+            arquivo_complt = arquivo.custom_read(pg=f'2-{qnt_pages}',\
                 area_lida=[8,0,100,100])
             
         arquivo_complt.insert(0,tabela1[0])
@@ -695,18 +699,18 @@ class Bradesco(Banco):
         self.df = self.df[self.df.Valor != '']
         self.df = self.df[self.df.Data.apply(lambda x: x[0].isnumeric())]
 
-class PagBank(Banco):
+class PagBank(Bank):
     def __init__(self):
         super().__init__()
         self.titulo = 'PagBank'
 
-    def gerar_extrato(self, arquivo: Arquivo):
-        qnt_pages = arquivo.qnt_paginas()
+    def gerar_extrato(self, arquivo: File):
+        qnt_pages = arquivo.lenght()
 
-        tabela1 = arquivo.leitura_custom(area_lida=[16,0,100,100], pg=1)
+        tabela1 = arquivo.custom_read(area_lida=[16,0,100,100], pg=1)
         
         if qnt_pages > 1:
-            arquivo_complt = arquivo.leitura_custom(pg=f'2-{qnt_pages}',\
+            arquivo_complt = arquivo.custom_read(pg=f'2-{qnt_pages}',\
                 area_lida=[0,0,100,100])
             
         arquivo_complt.insert(0,tabela1[0])
@@ -731,7 +735,7 @@ class Gerador(QObject):
     inicio = Signal(bool)
     fim = Signal(bool)
 
-    def __init__(self, banco: Banco, arquivo: Arquivo, id_banco: int, relacoes: dict[int, str]) -> None:
+    def __init__(self, banco: Bank, arquivo: File, id_banco: int, relacoes: dict[int, str]) -> None:
         super().__init__()
         self.banco = banco
         self.arquivo = arquivo
@@ -814,21 +818,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'pagbank': PagBank(),
         }
 
-        self.arquivo = Arquivo()
-
-        self.setWindowIcon(QIcon(resource_path('src\\imgs\\extr-icon.ico')))
+        self.arquivo = File()
+        self.setWindowIcon(QIcon(
+            (Path(__file__).parent / 'src' / 'imgs' / 'extr-icon.ico').__str__()
+            )
+        )
         self.setWindowTitle('Conversor de Extrato')
 
-        self.movie = QMovie(resource_path("src\\imgs\\load.gif"))
+        self.movie = QMovie(
+            (Path(__file__).parent / 'src'/ 'imgs' / 'load.gif').__str__()
+        )
         self.label_load.setMovie(self.movie)
 
         icon = QIcon()
-        icon.addFile(resource_path("src\\imgs\\upload-icon.png"), QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        icon.addFile(
+            (Path(__file__).parent / 'src'/ 'imgs' / 'upload-icon.png').__str__(),
+            QSize(),
+            QIcon.Mode.Normal,
+            QIcon.State.Off
+        )
         self.pushButton_upload.setIcon(icon)
 
         #Logo
-        self.logo_hori.setPixmap(QPixmap
-        (resource_path('src\\imgs\\extrato_horizontal.png')))
+        self.logo_hori.setPixmap(QPixmap(
+                (Path(__file__).parent / 'src' / 'imgs' / 'extrato_horizontal.png').__str__()
+            )
+        )
 
         self.comboBox.currentTextChanged.connect(
             self.pesquisar_empresas
@@ -842,20 +857,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.executar
         )
         
+        self.ref_bank = self.db.bank()
         self.comboBox.setPlaceholderText(self.PLCHR_COMBOBOX)
-        self.comboBox.addItems(
-             ["Caixa","Banco do Brasil","Santa Fé","Sicoob", "Inter", "Itaú", "Mercado Pago", "Bradesco","PagBank"]
-        )
+        self.comboBox.addItems(list(self.ref_bank.values()))
 
     def executar(self):
         try:       
-            id_emp = self.option_escolhida()
             if self.id_banco == -1:
-                raise Exception('Escolha um banco e uma empresa, caso a que deseja não esteja disponível, marque "Não Encontrado"')
+                raise Exception('Primeiramente, escolha o banco do extrato e selecione / cadastre a empresa em questão')
 
+            relacoes = self.option_escolhida()
             banco = self.banco_desejado()
-            relacoes = self.db.relacoes(self.id_banco, id_emp)
-
             self._gerador = Gerador(
                 banco,
                 self.arquivo,
@@ -914,13 +926,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.scrollArea.setWidget(self.widget)
 
     def add_options(self):
-        self.id_banco = self.db.id_banco(self.comboBox.currentText())
-        empresas_disp = self.db.clientes_do_banco(self.id_banco)
+        empresas_disp = self.db.companie(
+            list(self.ref_bank.keys())[self.comboBox.currentIndex()]
+        )
 
         self.options.clear()
-        self.options[-1] = QRadioButton('Não Encontrado')
-        self.vbox.addWidget(self.options[-1])
-        
         for id_emp, nome_emp in empresas_disp.items():
             self.options[id_emp] = QRadioButton(nome_emp)
             self.vbox.addWidget(self.options[id_emp])
@@ -928,27 +938,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def option_escolhida(self) -> int:
         for id_emp, widget in self.options.items():
             if widget.isChecked():
-                return id_emp
-        return -1
+                return self.db.reference(self.id_banco, id_emp)
+        return {}
 
-    def banco_desejado(self) -> Banco:
+    def banco_desejado(self) -> Bank:
         if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
             for key, obj in self.ref.items():
                 if key in self.comboBox.currentText().lower():
                     return obj
-        else:
-            nome_arq = self.arquivo.get_caminho().lower()
-            for chave, obj in self.ref.items():
-                if chave in nome_arq:
-                    return obj
-        raise Exception('Nome do banco não identificado no arquivo, favor seleciona-lo')
 
     def inserir(self):
         try:
-            caminho = self.arquivo.set_caminho(askopenfilename())
-            if caminho != None:
-                self.pushButton_upload.setText(caminho)
+            file_stem = self.arquivo.set_path(askopenfilename())
+            if file_stem != None:
+                self.pushButton_upload.setText(file_stem)
                 self.pushButton_upload.setIcon(QPixmap(''))
+
+                self.select_combo(file_stem)
 
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'O arquivo selecionado apresenta-se em aberto em outra janela, favor fecha-la')
@@ -956,6 +962,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= 'O arquivo selecionado já apresenta uma versão sem acento, favor usar tal versão ou apagar uma delas')
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
+
+    def select_combo(self, file_stem: str):
+        for key, bank in self.ref.items():
+            if key in file_stem.lower():
+                i = self.comboBox.findText(
+                        bank.__str__(), Qt.MatchFlag.MatchStartsWith
+                    )
+                self.comboBox.setCurrentIndex(
+                    self.comboBox.findText(
+                        bank.__str__(), Qt.MatchFlag.MatchContains
+                    )
+                )
 
 if __name__ == '__main__':
     app = QApplication()
