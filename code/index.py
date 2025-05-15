@@ -3,7 +3,7 @@ from PySide6.QtWidgets import (
 )
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PySide6.QtCore import QThread, QObject, Signal, QSize
-from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt
+from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt, QFont
 from src.window_extratos import Ui_MainWindow
 from os import renames, startfile, getenv
 from abc import abstractmethod, ABCMeta
@@ -58,7 +58,7 @@ class DataBase:
             )
         return { id: nome for id, nome in cursor.fetchall() }
 
-    def bank(self) -> dict[str, int]:
+    def bank(self) -> dict[int, str]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 self.query_bank,
@@ -187,7 +187,7 @@ class Bank:
 
         self.df.insert(col,'Inf.',coluna_inf)
 
-    def to_string(self) -> str:
+    def __str__(self) -> str:
         return self.titulo
     #Cada banco possui uma gerar_extrato próprio!!
 
@@ -801,9 +801,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.db = DataBase()
-        self.id_banco = -1
-        self.options = {}
-        self.ref = {
+        self.companies_checkbox = {}
+        self.dict_nick_bank = {
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
             'santa fe' :SantaFe(),
@@ -817,6 +816,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'bradesco': Bradesco(),
             'pagbank': PagBank(),
         }
+
+        self.dict_bank_text = self.db.bank()
+        self.comboBox.setPlaceholderText(self.PLCHR_COMBOBOX)
+        self.comboBox.addItems(list(self.dict_bank_text.values()))
+        
+        self.checkBox_font = QFont()
+        self.checkBox_font.setFamilies([u"Bahnschrift"])
+        self.checkBox_font.setWeight(QFont.Weight.Light)
+        self.checkBox_font.setPointSize(14)
 
         self.arquivo = File()
         self.setWindowIcon(QIcon(
@@ -857,22 +865,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.executar
         )
         
-        self.ref_bank = self.db.bank()
-        self.comboBox.setPlaceholderText(self.PLCHR_COMBOBOX)
-        self.comboBox.addItems(list(self.ref_bank.values()))
+        
 
     def executar(self):
         try:       
-            if self.id_banco == -1:
+            id_bank = self.dict_bank_text.get(self.comboBox.currentText())
+            if id_bank == None:
                 raise Exception('Primeiramente, escolha o banco do extrato e selecione / cadastre a empresa em questão')
 
-            relacoes = self.option_escolhida()
-            banco = self.banco_desejado()
+            reference = self.reference(id_bank)
+            bank = self.bank()
             self._gerador = Gerador(
-                banco,
+                bank,
                 self.arquivo,
-                self.id_banco,
-                relacoes
+                id_bank,
+                reference
             )
             self._thread = QThread()
 
@@ -913,39 +920,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.label_aviso.hide()
             self.vbox = QVBoxLayout()
         else:
-            self.widget.destroy()
-            for widget in self.options.values():
-                self.vbox.removeWidget(widget)
-                widget.destroy()
+            self.scrollArea.widget().destroy()
+            for checkBox in self.companies_checkbox.values():
+                self.vbox.removeWidget(checkBox)
+                checkBox.destroy()
 
-        self.widget = QWidget()
-
+        widget = QWidget()
         self.add_options()
 
-        self.widget.setLayout(self.vbox)
-        self.scrollArea.setWidget(self.widget)
+        widget.setLayout(self.vbox)
+        self.scrollArea.setWidget(widget)
 
     def add_options(self):
         empresas_disp = self.db.companie(
-            list(self.ref_bank.keys())[self.comboBox.currentIndex()]
+            list(self.dict_bank_text.keys())[self.comboBox.currentIndex()]
         )
 
-        self.options.clear()
+        self.companies_checkbox.clear()
         for id_emp, nome_emp in empresas_disp.items():
-            self.options[id_emp] = QRadioButton(nome_emp)
-            self.vbox.addWidget(self.options[id_emp])
+            item = QRadioButton(nome_emp)
+            item.setFont(self.checkBox_font)
+            self.companies_checkbox[id_emp] = item
+            self.vbox.addWidget(item)
 
-    def option_escolhida(self) -> int:
-        for id_emp, widget in self.options.items():
+    def reference(self, id_bank: int) -> int:
+        for id_emp, widget in self.companies_checkbox.items():
             if widget.isChecked():
-                return self.db.reference(self.id_banco, id_emp)
+                return self.db.reference(id_bank, id_emp)
         return {}
 
-    def banco_desejado(self) -> Bank:
-        if self.comboBox.currentText() != self.PLCHR_COMBOBOX:
-            for key, obj in self.ref.items():
-                if key in self.comboBox.currentText().lower():
-                    return obj
+    def bank(self) -> Bank:
+        for key, bank in self.dict_nick_bank.items():
+            if key in self.comboBox.currentText().lower():
+                return bank
 
     def inserir(self):
         try:
@@ -964,14 +971,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= error)
 
     def select_combo(self, file_stem: str):
-        for key, bank in self.ref.items():
+        for key in self.dict_nick_bank.keys():
             if key in file_stem.lower():
-                i = self.comboBox.findText(
-                        bank.__str__(), Qt.MatchFlag.MatchStartsWith
-                    )
                 self.comboBox.setCurrentIndex(
                     self.comboBox.findText(
-                        bank.__str__(), Qt.MatchFlag.MatchContains
+                        key, Qt.MatchFlag.MatchContains
                     )
                 )
 
