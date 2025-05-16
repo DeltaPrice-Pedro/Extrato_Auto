@@ -127,7 +127,7 @@ class DataBase:
         ids = data.pop('id_reference')
         return ids, data
     
-    def changes(self, id_bank, id_companie: str, change: Change):
+    def execute_change(self, id_bank, id_companie: str, change: Change):
         add, updt, remove = change.data()
 
         #ADD
@@ -1222,7 +1222,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return None
             
            
-            self.db.changes(self.current_companie_id, self.save_reference())
+            self.db.execute_change(
+                self.current_companie_id, self.change_reference()
+            )
             self.apply_save()
             
             self.disable_btns()
@@ -1237,7 +1239,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return True
         return False
 
-    def save_reference(self) -> Change | None:
+    def change_reference(self) -> Change | None:
         changes = Change()
         for row in range(self.table_reference.rowCount()):
             item = self.table_reference.item(row, 0)
