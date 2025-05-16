@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>667</width>
+    <width>672</width>
     <height>654</height>
    </rect>
   </property>
@@ -307,6 +307,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                             <pointsize>12</pointsize>
                            </font>
                           </property>
+                          <property name="editTriggers">
+                           <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::DoubleClicked</set>
+                          </property>
                           <property name="alternatingRowColors">
                            <bool>true</bool>
                           </property>
@@ -315,6 +318,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           </property>
                           <attribute name="horizontalHeaderDefaultSectionSize">
                            <number>116</number>
+                          </attribute>
+                          <attribute name="verticalHeaderVisible">
+                           <bool>false</bool>
                           </attribute>
                           <column>
                            <property name="text">
@@ -957,7 +963,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>667</width>
+     <width>672</width>
      <height>22</height>
     </rect>
    </property>

@@ -35,7 +35,9 @@ class DataBase:
                 database= getenv('DB'),
             )
         
-        self.columns_reference = ['id_reference', 'key', 'value', 'credit' ]
+        self.columns_reference = [
+            'id_reference', 'word', 'value', 'release_letter' 
+        ]
 
         self.query_bank = (
             f'SELECT id_bank, name, code FROM {self.BANK_TABLE} '
@@ -49,7 +51,7 @@ class DataBase:
         self.query_reference =  (
             f'SELECT {', '.join(self.columns_reference)} '
             f'FROM {self.REFERENCE_TABLE} '
-            'WHERE id_bank = %s AND id_companie = %s '
+            'WHERE id_bank = %s AND id_companie = %s'
         )
 
         pass
@@ -966,12 +968,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stackedWidget_companie.setCurrentIndex(1)
 
     def fill_reference(self, id_bank):
-        ids, data = self.db.reference(id_bank, self.current_companie_id)
+        self.table_reference.clearContents()
 
-        self.table_reference.clear()
+        ids, data = self.db.reference(id_bank, self.current_companie_id)
+        self.table_reference.setColumnCount(len(data.keys()))
+        self.table_reference.setRowCount(len(ids))
         for column, column_data in enumerate(data.values()):
             for row, value in enumerate(column_data):
                 item = QTableWidgetItem()
+                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 item.__setattr__('id', ids[row])
                 item.__setattr__('edited', False)
                 item.setText(str(value))
