@@ -1,9 +1,10 @@
 from PySide6.QtWidgets import (
-    QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget
+    QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget,
+    QTableWidgetItem
 )
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PySide6.QtCore import QThread, QObject, Signal, QSize
-from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt, QFont
+from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt, QFont, QMouseEvent
 from src.window_extratos import Ui_MainWindow
 from os import renames, startfile, getenv
 from abc import abstractmethod, ABCMeta
@@ -33,19 +34,22 @@ class DataBase:
                 password= getenv('PASSWORD'),
                 database= getenv('DB'),
             )
+        
+        self.columns_reference = ['id_reference', 'key', 'value', 'credit' ]
 
         self.query_bank = (
-            f'SELECT id_bank, name, code FROM {self.BANK_TABLE};'
+            f'SELECT id_bank, name, code FROM {self.BANK_TABLE} '
         )
 
         self.query_companie = (
             f'SELECT id_companie, name FROM {self.COMPANIE_TABLE} '
-            'WHERE id_bank = %s;'
+            'WHERE id_bank = %s '
         )
 
         self.query_reference =  (
-            f'SELECT key, value FROM {self.REFERENCE_TABLE} '
-            'WHERE id_bank = %s AND id_companie = %s;'
+            f'SELECT {', '.join(self.columns_reference)} '
+            f'FROM {self.REFERENCE_TABLE} '
+            'WHERE id_bank = %s AND id_companie = %s '
         )
 
         pass
@@ -56,24 +60,34 @@ class DataBase:
                 self.query_companie,
                 (id_bank,)
             )
+            self.connection.commit()
         return { id: nome for id, nome in cursor.fetchall() }
 
-    def bank(self) -> dict[int, str]:
+    def bank(self) -> dict[str, int]:
         with self.connection.cursor() as cursor:
             cursor.execute(
                 self.query_bank,
             )
-        return { id: f'{name} - {code}' for id, name, code in cursor.fetchall() }
+            self.connection.commit()
+        return { 
+            f'{name} - {code}': id for id, name, code in cursor.fetchall()
+        }
     
-    def reference(self, id_bank: int, id_companie: int) -> dict[int, str]:
+    def reference(self, id_bank: int, id_companie: int):
         with self.connection.cursor() as cursor:
             cursor.execute(
                 self.query_reference,
                 (id_bank, id_companie)
             )
-        return { 
-            key: value for key, value in cursor.fetchall()
-        }
+            self.connection.commit()
+        
+        data = {key: [] for key in self.columns_reference}
+        for sub in cursor.fetchall():
+            for index, i in enumerate(sub):
+                data[self.columns_reference[index]].append(i)
+            
+        ids = data.pop('id_reference')
+        return ids, data
 
 class File:
     #Cada arquivo possui um banco
@@ -806,8 +820,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
             'santa fe' :SantaFe(),
-            'bb' : BancoDoBrasil(),
             'banco do brasil': BancoDoBrasil(),
+            'bb' : BancoDoBrasil(),
             'sicoob': Sicoob(),
             'inter' : Inter(),
             'itaú': Itau(),
@@ -817,9 +831,53 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'pagbank': PagBank(),
         }
 
+        self.connections = {}
+        self.ref_universal = {
+            'companies': [
+                {
+                    # self.pushButton_add: self.add_companie,
+                    # self.pushButton_remove: self.remove_companie,
+                    # self.pushButton_update: self.update_companie,
+                    # self.pushButton_reload: self.fill_companie,
+                },
+                {
+                    self.pushButton_add: 'Adciona empresa a lista de empresas cadastradas',
+                    self.pushButton_remove: 'Remove empresa cadastrada',
+                    self.pushButton_update: 'Edita o nome de empresa cadastrada',
+                }
+            ],
+            'reference': [
+                {
+                    # self.pushButton_add: self.add_taxes,
+                    # self.pushButton_remove: self.remove_taxes,
+                    # self.pushButton_save: self.save_taxes,
+                    # self.pushButton_reload: self.fill_reference,
+                },
+                {
+                    self.pushButton_add: 'Adciona imposto a lista de impostos cadastrados',
+                    self.pushButton_remove: 'Remove imposto cadastrado',
+                    self.pushButton_save: 'Edita o nome de imposto cadastrado',
+                    # self.pushButton_reload: '',
+                }
+            ]
+        }
+
+        self.enable_status = True
+        self.ref_disable_btns = [
+            self.pushButton_add,
+            self.pushButton_remove,
+            self.pushButton_save,
+            self.pushButton_update,
+            self.pushButton_execute,
+            self.pushButton_exit
+        ]
+        self.disable_buttons()
+        self.label_companie_info.hide()
+        self.switch_focus('companies')
+
         self.dict_bank_text = self.db.bank()
         self.comboBox.setPlaceholderText(self.PLCHR_COMBOBOX)
-        self.comboBox.addItems(list(self.dict_bank_text.values()))
+        self.comboBox.addItems(list(self.dict_bank_text.keys()))
         
         self.checkBox_font = QFont()
         self.checkBox_font.setFamilies([u"Bahnschrift"])
@@ -861,11 +919,63 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.inserir
         )
 
-        self.pushButton_executar.clicked.connect(
+        self.pushButton_execute.clicked.connect(
             self.executar
         )
         
-        
+    def disable_buttons(self):
+        self.enable_status = not self.enable_status
+        for item in self.ref_disable_btns:
+            item.setEnabled(self.enable_status)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        widget = self.childAt(event.position())
+        if widget is not None and type(widget) == QRadioButton :
+            self.open_reference(widget) 
+
+    def switch_focus(self, current_widget: str):
+        ref_connection = {}
+        ref_tool_tip = {}
+
+        ref_connection, ref_tool_tip = self.ref_universal[current_widget]
+        self.re_connection(ref_connection)
+        self.re_tool_tip(ref_tool_tip)
+
+    def re_connection(self, ref):
+        for widget, connection in self.connections.items():
+            widget.disconnect(connection)
+        self.connections.clear()
+
+        for widget, func in ref.items():
+            self.connections[widget] = widget.clicked.connect(func)
+
+    def re_tool_tip(self, ref):
+        for widget, text in ref.items():
+            widget.setToolTip(text)
+
+    def open_reference(self, radio: QRadioButton):
+        self.switch_focus('reference')
+        self.label_current_companie.setText(radio.text())
+        self.current_companie_id = self.companies_checkbox[radio]
+        id_bank = self.dict_bank_text[self.comboBox.currentText()]
+
+        self.fill_reference(id_bank)
+
+        self.pushButton_save.setHidden(False)
+        self.pushButton_update.setHidden(True)
+        self.stackedWidget_companie.setCurrentIndex(1)
+
+    def fill_reference(self, id_bank):
+        ids, data = self.db.reference(id_bank, self.current_companie_id)
+
+        self.table_reference.clear()
+        for column, column_data in enumerate(data.values()):
+            for row, value in enumerate(column_data):
+                item = QTableWidgetItem()
+                item.__setattr__('id', ids[row])
+                item.__setattr__('edited', False)
+                item.setText(str(value))
+                self.table_reference.setItem(row, column, item)
 
     def executar(self):
         try:       
@@ -919,9 +1029,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.scrollArea.setDisabled(False)
             self.label_aviso.hide()
             self.vbox = QVBoxLayout()
+            self.label_companie_info.setHidden(False)
+            self.disable_buttons()
         else:
             self.scrollArea.widget().destroy()
-            for checkBox in self.companies_checkbox.values():
+            for checkBox in self.companies_checkbox.keys():
                 self.vbox.removeWidget(checkBox)
                 checkBox.destroy()
 
@@ -933,18 +1045,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def add_options(self):
         empresas_disp = self.db.companie(
-            list(self.dict_bank_text.keys())[self.comboBox.currentIndex()]
+            self.dict_bank_text[self.comboBox.currentText()]
+
         )
 
         self.companies_checkbox.clear()
         for id_emp, nome_emp in empresas_disp.items():
             item = QRadioButton(nome_emp)
             item.setFont(self.checkBox_font)
-            self.companies_checkbox[id_emp] = item
+            self.companies_checkbox[item] = id_emp
             self.vbox.addWidget(item)
 
     def reference(self, id_bank: int) -> int:
-        for id_emp, widget in self.companies_checkbox.items():
+        for widget, id_emp in self.companies_checkbox.items():
             if widget.isChecked():
                 return self.db.reference(id_bank, id_emp)
         return {}
