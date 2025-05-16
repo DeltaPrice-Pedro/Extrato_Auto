@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget,
-    QTableWidgetItem
+    QTableWidgetItem, QComboBox, QSpinBox, QLineEdit
 )
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PySide6.QtCore import QThread, QObject, Signal, QSize
-from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt, QFont, QMouseEvent
+from PySide6.QtGui import QPixmap, QIcon, QMovie, Qt, QFont, QMouseEvent, QBrush, QColor
 from src.window_extratos import Ui_MainWindow
 from os import renames, startfile, getenv
 from abc import abstractmethod, ABCMeta
@@ -20,6 +20,25 @@ import pandas as pd
 import sys
 
 load_dotenv(Path(__file__).parent / 'src' / 'env' / '.env')
+
+class Change:
+    def __init__(self):
+        self.add = []
+        self.updt = {}
+        self.remove = []
+        pass
+    def to_add(self, *args):
+        self.add.append(*args)
+
+    def to_updt(self, id, *args):
+        self.updt[id] = args
+    
+    def to_remove(self, id):
+        self.remove.append(id)
+
+    def data(self):
+        return self.add, self.updt, self.remove
+
 
 class DataBase:
     COMPANIE_TABLE = 'Companie'
@@ -52,6 +71,23 @@ class DataBase:
             f'SELECT {', '.join(self.columns_reference)} '
             f'FROM {self.REFERENCE_TABLE} '
             'WHERE id_bank = %s AND id_companie = %s'
+        )
+
+        self.insert_pedency = (
+            f'INSERT INTO {self.REFERENCE_TABLE} '
+            '(id_bank, id_companie, word, '
+            'value, release_letter) '
+            'VALUES (%(id_bank)s, %(id_companie)s,'
+            '%(Palavra)s, %(Valor)s, %(Lançamento)s)'
+        )
+
+        self.update_pedency = (
+            f'UPDATE {self.PENDING_TABLE} SET '
+            'value = %(Valor)s, competence = %(Competência)s, '
+            'maturity = %(Vencimento)s, type = %(Tipo)s, '
+            'observations = %(Observações)s '
+            'WHERE id_companies = %(id_companies)s AND '
+            'id_pending = %(id_pending)s'
         )
 
         pass
@@ -90,6 +126,54 @@ class DataBase:
             
         ids = data.pop('id_reference')
         return ids, data
+    
+    def changes(self, id_bank, id_companie: str, change: Change):
+        add, updt, remove = change.data()
+
+        #ADD
+        if any(add):
+            info =  self.__tranform_add(id_bank, id_companie, add)
+            self.__add_reference(info)
+
+        #UPDATE
+        if any(updt):
+            self.updt_pedency(id_bank, id_companie, updt)
+
+        #REMOVE
+        if any(remove):
+            self.__remove_change(id_bank, id_companie, remove)
+
+
+    def __tranform_add(self, id_bank, id_companie, add):
+        for data in add:
+            data['id_pedency'] = id_companie
+            data['id_companie'] = id_bank
+        return data
+
+    def __add_reference(self, info):
+        with self.connection.cursor() as cursor:
+            cursor.executemany(
+                    self.insert_pedency,
+                    info
+                )
+        self.connection.commit()
+
+    # def updt_pedency(self, id_companie, updt):
+    #     with self.connection.cursor() as cursor:
+    #         infos = self.__transform_updt_pedency(id_companie, updt)
+    #         cursor.executemany(
+    #                 self.delete_pedency,
+    #                 infos
+    #             )
+    #         self.connection.commit()
+
+    # def __remove_change(self, id_companie: str, query: str, data: list[str]):
+    #     with self.connection.cursor() as cursor:
+    #         cursor.executemany(
+    #             query, 
+    #             ([id_companie, id_data] for id_data in data)
+    #         )
+    #         self.connection.commit()
 
 class File:
     #Cada arquivo possui um banco
@@ -818,6 +902,45 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.db = DataBase()
         self.companies_checkbox = {}
+
+        self.current_operation = ''
+        self.ref_operation = {
+            'add': self.confirm_add,
+            'updt': self.confirm_updt
+        }
+
+        self.add_brush = QBrush(QColor(179, 255, 178, 255))
+        self.add_brush.setStyle(Qt.BrushStyle.Dense1Pattern)
+
+        self.updt_brush = QBrush(QColor(189, 253, 254, 255))
+        self.updt_brush.setStyle(Qt.BrushStyle.Dense1Pattern)
+
+        self.remove_brush = QBrush(QColor(254, 139, 139, 255))
+        self.remove_brush.setStyle(Qt.BrushStyle.Dense1Pattern)
+
+        self.no_brush = QBrush(Qt.BrushStyle.NoBrush)
+
+        self.default_resp = [
+            '', '0', 'C'
+        ]
+
+        self.ref_input = {
+            QComboBox : lambda value, widget: widget.\
+                setCurrentIndex(['C','D'].index(value)),
+            QSpinBox : lambda value, widget: widget.setValue(int(value)),
+            QLineEdit : lambda value, widget: widget.setText(value)
+        }
+
+        self.ref_input_text = {
+            QComboBox : lambda widget: widget.currentText(),
+            QLineEdit : lambda widget: widget.text(),
+            QSpinBox : lambda widget: widget.text(),
+        }
+
+        self.inputs = [
+            self.lineEdit_word, self.spinBox_value, self.comboBox_release
+        ]
+
         self.dict_nick_bank = {
             'caixa': Caixa(),
             'santa fé' : SantaFe(),
@@ -850,7 +973,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             ],
             'reference': [
                 {
-                    # self.pushButton_add: self.add_taxes,
+                    self.pushButton_add: self.add_reference,
                     # self.pushButton_remove: self.remove_taxes,
                     # self.pushButton_save: self.save_taxes,
                     # self.pushButton_reload: self.fill_reference,
@@ -924,6 +1047,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_execute.clicked.connect(
             self.executar
         )
+
+        self.pushButton_cancel.clicked.connect(
+            lambda: self.stackedWidget_reference.setCurrentIndex(0)
+        )
         
     def disable_buttons(self):
         self.enable_status = not self.enable_status
@@ -981,6 +1108,175 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 item.__setattr__('edited', False)
                 item.setText(str(value))
                 self.table_reference.setItem(row, column, item)
+
+    def confirm(self):
+        self.ref_operation[self.current_operation]()
+
+    def add_reference(self):
+        for column in range(self.table_reference.columnCount()):
+            input = self.inputs[column]
+            self.ref_input[type(input)](self.default_resp[column], input)
+        
+        self.current_operation = 'add'
+        self.stackedWidget_reference.setCurrentIndex(1)
+
+    def confirm_add(self):
+        resp = self.__inputs_response()
+
+        row = self.table_reference.rowCount()
+        self.table_reference.setRowCount(row + 1)
+        for column in range(self.table_reference.columnCount()):
+            item = QTableWidgetItem()
+            item.__setattr__('id', None)
+            item.__setattr__('edited', False)
+            item.setText(resp[column])
+            item.setBackground(self.add_brush)
+            self.table_reference.setItem(row, column, item)
+            
+        self.stackedWidget_reference.setCurrentIndex(0)
+
+    def __inputs_response(self):
+        resp = []
+        for input in self.inputs:
+            text = self.ref_input_text[type(input)](input)
+            resp.append(text)
+        return resp
+    
+    def updt(self):
+        item = self.table_reference.selectedItems()[0]
+        row = item.row()
+        for column in range(self.table_reference.columnCount()):
+            item = self.table_reference.item(row, column)
+            input = self.inputs[column]
+            self.ref_input[type(input)](item.text(), input)
+
+        self.current_operation = 'updt'
+        self.stackedWidget_reference.setCurrentIndex(1)
+
+    def confirm_updt(self):
+        bush = ''
+        edited = True
+
+        resp = self.__inputs_response()
+        item = self.table_reference.selectedItems()[0]
+        row = item.row()
+
+        #Mudou mesmo?
+        if self.__check_updt(resp, row) == False:
+            return self.stacked_widget.setCurrentIndex(0)
+        
+        #Esses dados já existiram nessa sessão?
+        elif self.__check_season_updt(resp) == True:
+            bush = self.no_brush
+            edited = False
+
+        else:
+            if None == item.__getattribute__('id'):
+                bush = self.add_brush
+            else:
+                bush = self.updt_brush
+        
+        for column in range(self.table_reference.columnCount()):
+            item = self.table_reference.item(row, column)
+            item.__setattr__('edited', edited)
+            item.setBackground(bush)
+            item.setText(resp[column])
+
+        self.stackedWidget_reference.setCurrentIndex(0)
+
+    def __check_updt(self, resp, row):
+        for column in range(self.table_reference.columnCount()):
+            item = self.table_reference.item(row, column)
+            if item.text() != resp[column]:
+                return True
+        return False
+    
+    def remove(self):
+        try:
+            item = self.table_reference.selectedItems()[0]
+            row = item.row()
+            if item.background() == self.add_brush:
+                self.table_reference.removeRow(row)
+                return None
+            
+            bush = self.remove_brush
+            if item.background() == self.remove_brush:
+                bush = self.updt_brush\
+                    if True == item.__getattribute__('edited')\
+                        else self.no_brush
+
+            for column in range(self.table_reference.columnCount()):
+                item = self.table_reference.item(row, column)
+                item.setBackground(bush)
+        except IndexError:
+            messagebox.showerror('Aviso', 'Primeiro, selecione a pendência que deseja remover')
+
+    def save(self):
+        try:
+            self.disable_btns()
+
+            if self.has_change() != True:
+                raise Exception(self.message_no_save)
+            
+            if messagebox.askyesno('Aviso', self.message_save) == False:
+                return None
+            
+           
+            self.db.changes(self.current_companie_id, self.save_reference())
+            self.apply_save()
+            
+            self.disable_btns()
+        except Exception as err:
+            self.disable_btns()
+            messagebox.showerror('Aviso', err)
+
+    def has_change(self)-> bool:
+        for row in range(self.table_reference.rowCount()):
+            item = self.table_reference.item(row, 0)
+            if item.background() != self.no_brush:
+                return True
+        return False
+
+    def save_reference(self) -> Change | None:
+        changes = Change()
+        for row in range(self.table_reference.rowCount()):
+            item = self.table_reference.item(row, 0)
+            brush = item.background()
+            if brush == self.no_brush:
+                continue
+
+            elif brush == self.add_brush:
+                data = self.__data_row(row)
+                changes.to_add(data)
+
+            elif brush == self.updt_brush:
+                data = self.__data_row(row)
+                changes.to_updt(
+                    self.table_reference.item(row, 0)\
+                        .__getattribute__('id'), 
+                    data
+                )
+
+            elif brush == self.remove_brush:
+                changes.to_remove(
+                    self.table_reference.item(row, 0)\
+                        .__getattribute__('id')
+                )
+        return changes
+
+    def apply_save(self):
+        remove_count = 0
+        for row in range(self.table_reference.rowCount()):
+            current_row = row - remove_count
+            item = self.table_reference.item(current_row, 0)
+            brush = item.background()
+            if brush == self.remove_brush:
+                self.table_reference.removeRow(current_row)
+                remove_count = remove_count + 1
+            elif brush in [self.add_brush, self.updt_brush]:
+                for column in range(self.table_reference.columnCount()):
+                    item = self.table_reference.item(current_row, column)
+                    item.setBackground(self.no_brush)
 
     def executar(self):
         try:       
