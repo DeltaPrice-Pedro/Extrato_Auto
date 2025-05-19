@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>672</width>
-    <height>654</height>
+    <width>667</width>
+    <height>651</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -219,7 +219,7 @@
                          <x>0</x>
                          <y>0</y>
                          <width>366</width>
-                         <height>176</height>
+                         <height>173</height>
                         </rect>
                        </property>
                        <property name="sizePolicy">
@@ -308,7 +308,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            </font>
                           </property>
                           <property name="editTriggers">
-                           <set>QAbstractItemView::EditTrigger::AnyKeyPressed|QAbstractItemView::EditTrigger::DoubleClicked</set>
+                           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
                           </property>
                           <property name="alternatingRowColors">
                            <bool>true</bool>
@@ -336,7 +336,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                           </column>
                           <column>
                            <property name="text">
-                            <string>Valor</string>
+                            <string>Conta</string>
                            </property>
                            <property name="font">
                             <font>
@@ -434,6 +434,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
                             <family>Bahnschrift</family>
                             <pointsize>16</pointsize>
                            </font>
+                          </property>
+                          <property name="placeholderText">
+                           <string>Insira aqui</string>
                           </property>
                          </widget>
                         </item>
@@ -963,7 +966,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>672</width>
+     <width>667</width>
      <height>22</height>
     </rect>
    </property>

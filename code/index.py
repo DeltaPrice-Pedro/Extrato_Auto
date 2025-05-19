@@ -78,47 +78,35 @@ class DataBase:
             '(id_bank, id_companie, word, '
             'value, release_letter) '
             'VALUES (%(id_bank)s, %(id_companie)s,'
-            '%(Palavra)s, %(Valor)s, %(Lançamento)s)'
+            '%(Palavra)s, %(Conta)s, %(Lançamento)s)'
         )
 
-        self.update_pedency = (
-            f'UPDATE {self.PENDING_TABLE} SET '
-            'value = %(Valor)s, competence = %(Competência)s, '
-            'maturity = %(Vencimento)s, type = %(Tipo)s, '
-            'observations = %(Observações)s '
-            'WHERE id_companies = %(id_companies)s AND '
-            'id_pending = %(id_pending)s'
+        self.update_reference = (
+            f'UPDATE {self.REFERENCE_TABLE} SET '
+            'word = %(Palavra)s, value = %(Conta)s, '
+            'release_letter = %(Lançamento)s '
+            'WHERE id_reference = %(id_reference)s '
+        )
+
+        self.delete_reference = (
+            f'DELETE FROM {self.REFERENCE_TABLE} '
+            'WHERE id_reference = %s ; '
         )
 
         pass
 
     def companie(self, id_bank: int) -> dict[int, str]:
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                self.query_companie,
-                (id_bank,)
-            )
-            self.connection.commit()
+        cursor = self.__request(self.query_companie, (id_bank,))
         return { id: nome for id, nome in cursor.fetchall() }
 
     def bank(self) -> dict[str, int]:
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                self.query_bank,
-            )
-            self.connection.commit()
+        cursor = self.__request(self.query_bank)
         return { 
             f'{name} - {code}': id for id, name, code in cursor.fetchall()
         }
     
     def reference(self, id_bank: int, id_companie: int):
-        with self.connection.cursor() as cursor:
-            cursor.execute(
-                self.query_reference,
-                (id_bank, id_companie)
-            )
-            self.connection.commit()
-        
+        cursor = self.__request(self.query_reference, (id_bank, id_companie))
         data = {key: [] for key in self.columns_reference}
         for sub in cursor.fetchall():
             for index, i in enumerate(sub):
@@ -128,52 +116,37 @@ class DataBase:
         return ids, data
     
     def execute_change(self, id_bank, id_companie: str, change: Change):
+        #list[dict], dict[tuple[dict]], list[int]
         add, updt, remove = change.data()
 
         #ADD
         if any(add):
-            info =  self.__tranform_add(id_bank, id_companie, add)
-            self.__add_reference(info)
+            self.__tranform_add(id_bank, id_companie, add)
+            self.__request(self.insert_pedency, add, True)
 
         #UPDATE
         if any(updt):
-            self.updt_pedency(id_bank, id_companie, updt)
+            for id_reference, data in updt.items():
+                data['id_reference'] = id_reference
+            self.__request(self.update_reference, updt, True)
 
         #REMOVE
         if any(remove):
-            self.__remove_change(id_bank, id_companie, remove)
+            # ([id_companie, id_data] for id_data in data)
+            self.__request(self.delete_reference, remove, True)
 
 
     def __tranform_add(self, id_bank, id_companie, add):
         for data in add:
-            data['id_pedency'] = id_companie
-            data['id_companie'] = id_bank
-        return data
+            data['id_bank'] = id_bank
+            data['id_companie'] = id_companie
 
-    def __add_reference(self, info):
+    def __request(self, query, input = (), many = False):
         with self.connection.cursor() as cursor:
-            cursor.executemany(
-                    self.insert_pedency,
-                    info
-                )
-        self.connection.commit()
-
-    # def updt_pedency(self, id_companie, updt):
-    #     with self.connection.cursor() as cursor:
-    #         infos = self.__transform_updt_pedency(id_companie, updt)
-    #         cursor.executemany(
-    #                 self.delete_pedency,
-    #                 infos
-    #             )
-    #         self.connection.commit()
-
-    # def __remove_change(self, id_companie: str, query: str, data: list[str]):
-    #     with self.connection.cursor() as cursor:
-    #         cursor.executemany(
-    #             query, 
-    #             ([id_companie, id_data] for id_data in data)
-    #         )
-    #         self.connection.commit()
+            func = cursor.executemany if many else cursor.execute
+            func(query, input)
+            self.connection.commit()
+        return cursor
 
 class File:
     #Cada arquivo possui um banco
@@ -903,6 +876,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db = DataBase()
         self.companies_checkbox = {}
 
+        self.message_select = 'Primeiro, clique 1 vez na empresa que deseja {0}'
+        self.message_remove = 'Confirma a remoção desta empresa?\nTodas suas pendências e emails cadastrados também serão excluídos'
+        self.message_save = 'Tem certeza que deseja salvar estas alterações?'
+        self.message_pending_save = 'Antes de recarregar os dados, faça ou cancele o salvamento das alterações pendentes'
+        self.message_no_save = 'Não há alterações a serem salvas'
+        self.message_exit_save = 'Tem certeza que deseja sair da empresa SEM SALVAR as mudanças feitas nela?\n\nCaso não queira PERDER as alterações, selecione "não" e as salve'
+        self.message_send_email = 'Confirma o envio dessas pendências aos emails cadastrados?'
+
         self.current_operation = ''
         self.ref_operation = {
             'add': self.confirm_add,
@@ -974,8 +955,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'reference': [
                 {
                     self.pushButton_add: self.add_reference,
-                    # self.pushButton_remove: self.remove_taxes,
-                    # self.pushButton_save: self.save_taxes,
+                    self.pushButton_remove: self.remove_reference,
+                    self.pushButton_save: self.save_reference,
                     # self.pushButton_reload: self.fill_reference,
                 },
                 {
@@ -1035,21 +1016,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 (Path(__file__).parent / 'src' / 'imgs' / 'extrato_horizontal.png').__str__()
             )
         )
+        self.pushButton_save.setHidden(True)
 
-        self.comboBox.currentTextChanged.connect(
-            self.pesquisar_empresas
-        )
-        
-        self.pushButton_upload.clicked.connect( 
-            self.inserir
-        )
+        self.table_reference.itemDoubleClicked.connect(self.updt_reference)
+        self.comboBox.currentTextChanged.connect(self.pesquisar_empresas)
+        self.pushButton_upload.clicked.connect(self.inserir)
+        self.pushButton_execute.clicked.connect(self.execute)
+        self.pushButton_confirm.clicked.connect(self.confirm)
 
-        self.pushButton_execute.clicked.connect(
-            self.executar
-        )
-
+        self.pushButton_add.clicked.connect(self.disable_buttons)
+        self.pushButton_update.clicked.connect(self.disable_buttons)
+        self.pushButton_cancel.clicked.connect(self.disable_buttons)
+        self.pushButton_confirm.clicked.connect(self.disable_buttons)
         self.pushButton_cancel.clicked.connect(
             lambda: self.stackedWidget_reference.setCurrentIndex(0)
+        )
+        self.pushButton_exit.clicked.connect(
+            lambda: self.stackedWidget_companie.setCurrentIndex(0)
         )
         
     def disable_buttons(self):
@@ -1127,6 +1110,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.table_reference.setRowCount(row + 1)
         for column in range(self.table_reference.columnCount()):
             item = QTableWidgetItem()
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             item.__setattr__('id', None)
             item.__setattr__('edited', False)
             item.setText(resp[column])
@@ -1142,7 +1126,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             resp.append(text)
         return resp
     
-    def updt(self):
+    def updt_reference(self):
+        self.disable_buttons()
         item = self.table_reference.selectedItems()[0]
         row = item.row()
         for column in range(self.table_reference.columnCount()):
@@ -1163,12 +1148,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         #Mudou mesmo?
         if self.__check_updt(resp, row) == False:
-            return self.stacked_widget.setCurrentIndex(0)
+            return self.stackedWidget_reference.setCurrentIndex(0)
         
         #Esses dados já existiram nessa sessão?
-        elif self.__check_season_updt(resp) == True:
-            bush = self.no_brush
-            edited = False
+        # elif self.__check_season_updt(resp) == True:
+        #     bush = self.no_brush
+        #     edited = False
 
         else:
             if None == item.__getattribute__('id'):
@@ -1191,7 +1176,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return True
         return False
     
-    def remove(self):
+    def remove_reference(self):
         try:
             item = self.table_reference.selectedItems()[0]
             row = item.row()
@@ -1211,25 +1196,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except IndexError:
             messagebox.showerror('Aviso', 'Primeiro, selecione a pendência que deseja remover')
 
-    def save(self):
+    def save_reference(self):
         try:
-            self.disable_btns()
+            self.disable_buttons()
 
-            if self.has_change() != True:
+            if self.has_change() == False:
                 raise Exception(self.message_no_save)
             
             if messagebox.askyesno('Aviso', self.message_save) == False:
                 return None
-            
            
+            id_bank = self.dict_bank_text.get(self.comboBox.currentText())
             self.db.execute_change(
-                self.current_companie_id, self.change_reference()
+                id_bank, self.current_companie_id, self.change_reference()
             )
-            self.apply_save()
+            self.fill_reference(id_bank)
             
-            self.disable_btns()
+            self.disable_buttons()
         except Exception as err:
-            self.disable_btns()
+            self.disable_buttons()
             messagebox.showerror('Aviso', err)
 
     def has_change(self)-> bool:
@@ -1265,6 +1250,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                         .__getattribute__('id')
                 )
         return changes
+    
+    def __data_row(self, row) -> dict[str]:
+        data = {}
+        for column in range(self.table_reference.columnCount()):
+            item = self.table_reference.item(row, column)
+            key = self.table_reference.horizontalHeaderItem(column)
+            data[key.text()] = item.text()
+        return data
 
     def apply_save(self):
         remove_count = 0
@@ -1272,6 +1265,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             current_row = row - remove_count
             item = self.table_reference.item(current_row, 0)
             brush = item.background()
+
             if brush == self.remove_brush:
                 self.table_reference.removeRow(current_row)
                 remove_count = remove_count + 1
@@ -1280,12 +1274,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     item = self.table_reference.item(current_row, column)
                     item.setBackground(self.no_brush)
 
-    def executar(self):
+    def execute(self):
         try:       
             id_bank = self.dict_bank_text.get(self.comboBox.currentText())
-            if id_bank == None:
-                raise Exception('Primeiramente, escolha o banco do extrato e selecione / cadastre a empresa em questão')
-
             reference = self.reference(id_bank)
             bank = self.bank()
             self._gerador = Gerador(

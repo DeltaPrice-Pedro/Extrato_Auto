@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(672, 654)
+        MainWindow.resize(667, 651)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout_3 = QGridLayout(self.centralwidget)
@@ -152,7 +152,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaLayout = QWidget()
         self.scrollAreaLayout.setObjectName(u"scrollAreaLayout")
-        self.scrollAreaLayout.setGeometry(QRect(0, 0, 366, 176))
+        self.scrollAreaLayout.setGeometry(QRect(0, 0, 366, 173))
         sizePolicy4 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         sizePolicy4.setHorizontalStretch(0)
         sizePolicy4.setVerticalStretch(0)
@@ -226,7 +226,7 @@ class Ui_MainWindow(object):
         font6.setFamilies([u"Bahnschrift"])
         font6.setPointSize(12)
         self.table_reference.setFont(font6)
-        self.table_reference.setEditTriggers(QAbstractItemView.EditTrigger.AnyKeyPressed|QAbstractItemView.EditTrigger.DoubleClicked)
+        self.table_reference.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table_reference.setAlternatingRowColors(True)
         self.table_reference.setSortingEnabled(True)
         self.table_reference.horizontalHeader().setDefaultSectionSize(116)
@@ -563,7 +563,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 672, 22))
+        self.menubar.setGeometry(QRect(0, 0, 667, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -597,7 +597,7 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem = self.table_reference.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Palavra", None));
         ___qtablewidgetitem1 = self.table_reference.horizontalHeaderItem(1)
-        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Valor", None));
+        ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWindow", u"Conta", None));
         ___qtablewidgetitem2 = self.table_reference.horizontalHeaderItem(2)
         ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Lan\u00e7amento", None));
         self.pushButton_6.setText("")
