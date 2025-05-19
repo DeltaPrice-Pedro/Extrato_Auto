@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QMainWindow, QApplication, QRadioButton, QVBoxLayout, QWidget,
-    QTableWidgetItem, QComboBox, QSpinBox, QLineEdit
+    QTableWidgetItem, QComboBox, QSpinBox, QLineEdit, QDialogButtonBox
 )
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PySide6.QtCore import QThread, QObject, Signal, QSize
@@ -81,6 +81,11 @@ class DataBase:
             '%(Palavra)s, %(Conta)s, %(Lançamento)s)'
         )
 
+        self.insert_companie = (
+            f'INSERT INTO {self.COMPANIE_TABLE} '
+            '(id_bank, name) VALUES (%s, %s) '
+        )
+
         self.update_reference = (
             f'UPDATE {self.REFERENCE_TABLE} SET '
             'word = %(Palavra)s, value = %(Conta)s, '
@@ -94,6 +99,10 @@ class DataBase:
         )
 
         pass
+
+    def add_companie(self, id_bank, name):
+        cursor = self.__request(self.insert_companie, (id_bank, name,))
+        return cursor.lastrowid
 
     def companie(self, id_bank: int) -> dict[int, str]:
         cursor = self.__request(self.query_companie, (id_bank,))
@@ -875,6 +884,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.db = DataBase()
         self.companies_checkbox = {}
+        self.min_carc_companie = 6
 
         self.message_select = 'Primeiro, clique 1 vez na empresa que deseja {0}'
         self.message_remove = 'Confirma a remoção desta empresa?\nTodas suas pendências e emails cadastrados também serão excluídos'
@@ -886,8 +896,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.current_operation = ''
         self.ref_operation = {
-            'add': self.confirm_add,
-            'updt': self.confirm_updt
+            'add': self.confirm_add_refence,
+            'updt': self.confirm_updt_reference
         }
 
         self.add_brush = QBrush(QColor(179, 255, 178, 255))
@@ -941,7 +951,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ref_universal = {
             'companies': [
                 {
-                    # self.pushButton_add: self.add_companie,
+                    self.pushButton_add: self.add_companie,
                     # self.pushButton_remove: self.remove_companie,
                     # self.pushButton_update: self.update_companie,
                     # self.pushButton_reload: self.fill_companie,
@@ -979,6 +989,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ]
         self.disable_buttons()
         self.label_companie_info.hide()
+        self.frame_operations.hide()
         self.switch_focus('companies')
 
         self.dict_bank_text = self.db.bank()
@@ -1019,21 +1030,26 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_save.setHidden(True)
 
         self.table_reference.itemDoubleClicked.connect(self.updt_reference)
-        self.comboBox.currentTextChanged.connect(self.pesquisar_empresas)
-        self.pushButton_upload.clicked.connect(self.inserir)
+        self.comboBox.currentTextChanged.connect(self.search_companie)
+        self.pushButton_upload.clicked.connect(self.attach)
         self.pushButton_execute.clicked.connect(self.execute)
         self.pushButton_confirm.clicked.connect(self.confirm)
 
-        self.pushButton_add.clicked.connect(self.disable_buttons)
-        self.pushButton_update.clicked.connect(self.disable_buttons)
-        self.pushButton_cancel.clicked.connect(self.disable_buttons)
-        self.pushButton_confirm.clicked.connect(self.disable_buttons)
+        self.pushButton_add.clicked.connect(self.in_operation)
+        self.pushButton_update.clicked.connect(self.in_operation)
+        self.pushButton_cancel.clicked.connect(self.in_operation)
+        self.pushButton_confirm.clicked.connect(self.in_operation)
         self.pushButton_cancel.clicked.connect(
             lambda: self.stackedWidget_reference.setCurrentIndex(0)
         )
         self.pushButton_exit.clicked.connect(
             lambda: self.stackedWidget_companie.setCurrentIndex(0)
         )
+
+    def in_operation(self):
+        self.disable_buttons()
+        hide = not self.frame_operations.isHidden()
+        self.frame_operations.setHidden(hide)
         
     def disable_buttons(self):
         self.enable_status = not self.enable_status
@@ -1103,7 +1119,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_operation = 'add'
         self.stackedWidget_reference.setCurrentIndex(1)
 
-    def confirm_add(self):
+    def confirm_add_refence(self):
         resp = self.__inputs_response()
 
         row = self.table_reference.rowCount()
@@ -1138,7 +1154,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_operation = 'updt'
         self.stackedWidget_reference.setCurrentIndex(1)
 
-    def confirm_updt(self):
+    def confirm_updt_reference(self):
         bush = ''
         edited = True
 
@@ -1259,21 +1275,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             data[key.text()] = item.text()
         return data
 
-    def apply_save(self):
-        remove_count = 0
-        for row in range(self.table_reference.rowCount()):
-            current_row = row - remove_count
-            item = self.table_reference.item(current_row, 0)
-            brush = item.background()
-
-            if brush == self.remove_brush:
-                self.table_reference.removeRow(current_row)
-                remove_count = remove_count + 1
-            elif brush in [self.add_brush, self.updt_brush]:
-                for column in range(self.table_reference.columnCount()):
-                    item = self.table_reference.item(current_row, column)
-                    item.setBackground(self.no_brush)
-
     def execute(self):
         try:       
             id_bank = self.dict_bank_text.get(self.comboBox.currentText())
@@ -1318,7 +1319,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.movie.stop()
             self.stackedWidget.setCurrentIndex(0)
 
-    def pesquisar_empresas(self):
+    def search_companie(self):
         if self.scrollArea.isEnabled() == False:
             self.scrollArea.setDisabled(False)
             self.label_aviso.hide()
@@ -1332,23 +1333,62 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 checkBox.destroy()
 
         widget = QWidget()
-        self.add_options()
+        self.fill_companie()
 
         widget.setLayout(self.vbox)
         self.scrollArea.setWidget(widget)
 
-    def add_options(self):
+    def fill_companie(self):
         empresas_disp = self.db.companie(
             self.dict_bank_text[self.comboBox.currentText()]
-
         )
 
         self.companies_checkbox.clear()
         for id_emp, nome_emp in empresas_disp.items():
-            item = QRadioButton(nome_emp)
-            item.setFont(self.checkBox_font)
-            self.companies_checkbox[item] = id_emp
-            self.vbox.addWidget(item)
+            self.create_companie(id_emp, nome_emp)
+
+    def create_companie(self, id_emp, nome_emp):
+        item = QRadioButton(nome_emp)
+        item.__setattr__('id', id_emp)
+        item.setFont(self.checkBox_font)
+        self.companies_checkbox[item] = id_emp
+        self.vbox.addWidget(item)
+
+    def add_companie(self):
+        self.pushButton_confirm.hide()
+        item = QLineEdit(placeholderText='Nome da empresa (min. 6 caracteres)')
+        # item.setFont(self.font)
+        item.__setattr__('id', None)
+        item.textChanged.connect(self.companie_valid)
+        
+        self.current_item_edited = item
+        self.vbox.addWidget(item)
+
+    def confirm_add_companie(self):
+        try:
+            item = self.current_item_edited
+            name = item.text()
+            if name == '':
+                raise Exception('Nome de empresa inválida')
+            
+            id = item.__getattribute__('id')
+            if id == None:
+                id_bank = self.dict_bank_text.get(self.comboBox.currentText())
+                id = self.db.add_companie(id_bank, name)
+                self.create_companie(id, name)
+                item.deleteLater()
+            else:
+                self.db.edit_companie(id, name)
+
+            self.in_operation()
+        except Exception as error:
+            messagebox.showwarning('Aviso', error)
+
+    def companie_valid(self):
+        hide = True
+        if len(self.current_item_edited.text()) > self.min_carc_companie:
+            hide = False
+        self.pushButton_confirm.setHidden(hide)
 
     def reference(self, id_bank: int) -> int:
         for widget, id_emp in self.companies_checkbox.items():
@@ -1361,7 +1401,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if key in self.comboBox.currentText().lower():
                 return bank
 
-    def inserir(self):
+    def attach(self):
         try:
             file_stem = self.arquivo.set_path(askopenfilename())
             if file_stem != None:
