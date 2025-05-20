@@ -833,6 +833,7 @@ class PagBank(Bank):
 class Gerador(QObject):
     inicio = Signal(bool)
     fim = Signal(bool)
+    open = Signal(pd.DataFrame)
 
     def __init__(self, banco: Bank, arquivo: File, id_banco: int, relacoes: dict[int, str]) -> None:
         super().__init__()
@@ -849,7 +850,7 @@ class Gerador(QObject):
             if self.relacoes != {}:
                 arquivo_final = self.prog_contabil(arquivo_final)
 
-            self.abrir(arquivo_final)
+            self.open.emit(arquivo_final)
             self.fim.emit(False)
 
         except Exception as error:
@@ -862,7 +863,7 @@ class Gerador(QObject):
         #relações = listas de word, value, release_letter
         arquivo_novo = arquivo_final.copy(True)
         df_release = pd.DataFrame(self.relacoes)
-        
+
         release_letter_c = df_release.loc[df_release['letter'] == 'C']
         word_value_c = release_letter_c.loc[:, ['word','value']].values
         # words_c = release_letter_c['word']
@@ -902,21 +903,6 @@ class Gerador(QObject):
             # if word in finded_word:
             #     return index
         return None
-    
-    def abrir(self, arquivo_final: pd.DataFrame):
-        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
-
-        if file == '':
-            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
-            if resp == True:
-                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
-                return None
-            else:
-                return self.abrir(arquivo_final)
-
-        arquivo_final.to_excel(file+'.xlsx', index=False)
-        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
-        startfile(file+'.xlsx')
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     PLCHR_COMBOBOX = 'Selecione a opção'
@@ -930,12 +916,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.min_carc_companie = 6
 
         self.message_select = 'Primeiro, clique 1 vez na empresa que deseja {0}'
-        self.message_remove = 'Confirma a remoção desta empresa?\nTodas suas pendências e emails cadastrados também serão excluídos'
+        self.message_remove = 'Confirma a remoção desta empresa?\nTodas suas contas cadastradas também serão excluídas'
         self.message_save = 'Tem certeza que deseja salvar estas alterações?'
-        self.message_pending_save = 'Antes de recarregar os dados, faça ou cancele o salvamento das alterações pendentes'
         self.message_no_save = 'Não há alterações a serem salvas'
-        self.message_exit_save = 'Tem certeza que deseja sair da empresa SEM SALVAR as mudanças feitas nela?\n\nCaso não queira PERDER as alterações, selecione "não" e as salve'
-        self.message_send_email = 'Confirma o envio dessas pendências aos emails cadastrados?'
+        self.message_exit_save = 'Tem certeza que deseja sair da referência SEM SALVAR as mudanças feitas nela?\n\nCaso não queira PERDER as alterações, selecione "não" e as salve'
+
+        self.font = QFont()
+        self.font.setFamilies([u"Bahnschrift"])
+        self.font.setPointSize(12)
 
         self.current_operation = ''
         self.ref_operation = {
@@ -1087,9 +1075,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_cancel.clicked.connect(self.in_operation)
         self.pushButton_confirm.clicked.connect(self.in_operation)
         
-        self.pushButton_exit.clicked.connect(
-            lambda: self.stackedWidget_companie.setCurrentIndex(0)
-        )
+        self.pushButton_exit.clicked.connect(self.exit)
+
+    def exit(self):
+        if self.has_change():
+            if messagebox.askyesno('Aviso', self.message_exit_save) == False:
+                return None
+        
+        self.stackedWidget_companie.setCurrentIndex(0)
+        self.switch_focus('companies')
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent):
+        widget = self.childAt(event.position())
+        if widget is not None and type(widget) == QRadioButton :
+            self.open_reference(widget)
 
     def in_operation(self):
         self.disable_buttons()
@@ -1099,12 +1098,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def disable_buttons(self):
         self.enable_status = not self.enable_status
         for item in self.ref_disable_btns:
-            item.setEnabled(self.enable_status)
-
-    def mouseDoubleClickEvent(self, event: QMouseEvent):
-        widget = self.childAt(event.position())
-        if widget is not None and type(widget) == QRadioButton :
-            self.open_reference(widget) 
+            item.setEnabled(self.enable_status) 
 
     def switch_focus(self, current_widget: str):
         ref_connection = {}
@@ -1188,7 +1182,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return resp
     
     def updt_reference(self):
-        self.disable_buttons()
         item = self.table_reference.selectedItems()[0]
         row = item.row()
         for column in range(self.table_reference.columnCount()):
@@ -1255,7 +1248,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 item = self.table_reference.item(row, column)
                 item.setBackground(bush)
         except IndexError:
-            messagebox.showerror('Aviso', 'Primeiro, selecione a pendência que deseja remover')
+            messagebox.showerror('Aviso', 'Primeiro, selecione a referência que deseja remover')
 
     def save_reference(self):
         try:
@@ -1338,6 +1331,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self._gerador.fim.connect(self._thread.quit)
             self._gerador.fim.connect(self._thread.deleteLater)
             self._gerador.fim.connect(self.alter_estado)
+            self._gerador.open.connect(self.open_result)
             self._gerador.inicio.connect(self.alter_estado)
             
             self._thread.finished.connect(self._gerador.deleteLater)
@@ -1351,6 +1345,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= error)
         finally:
             self.alter_estado(False)
+
+    def open_result(self, arquivo_final: pd.DataFrame):
+        file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
+
+        if file == '':
+            resp = messagebox.askyesno(title='Aviso', message= 'Deseja cancelar a operação?')
+            if resp == True:
+                messagebox.showinfo(title='Aviso', message= 'Operação cancelada!')
+                return None
+            else:
+                return self.open_result(arquivo_final)
+
+        arquivo_final.to_excel(file+'.xlsx', index=False)
+        messagebox.showinfo(title='Aviso', message='Abrindo o arquivo gerado!')
+        startfile(file+'.xlsx')
 
     def alter_estado(self, cond: bool):
         self.exec_load(cond)
@@ -1515,6 +1524,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'O arquivo selecionado apresenta-se em aberto em outra janela, favor fecha-la')
         except FileExistsError:
+            #apagar arquivo já existente e executar novamente
             messagebox.showerror(title='Aviso', message= 'O arquivo selecionado já apresenta uma versão sem acento, favor usar tal versão ou apagar uma delas')
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
