@@ -859,23 +859,49 @@ class Gerador(QObject):
             self.fim.emit(False)
 
     def prog_contabil(self, arquivo_final: pd.DataFrame):
+        #relações = listas de word, value, release_letter
         arquivo_novo = arquivo_final.copy(True)
+        df_release = pd.DataFrame(self.relacoes)
+        
+        release_letter_c = df_release.loc[df_release['letter'] == 'C']
+        word_value_c = release_letter_c.loc[:, ['word','value']].values
+        # words_c = release_letter_c['word']
+
+        release_letter_d = df_release.loc[df_release['letter'] == 'D']
+        word_value_d = release_letter_d.loc[:, ['word','value']].values
+        # words_d = release_letter_d['word']
 
         for index, row in arquivo_novo.iterrows():
             if row['Inf.'] == 'C':
                 row['Cód. Conta Débito'] = self.id_banco
+                # index = self.search_word(words_c, row)
+                # if index != None:
+                #     row['Cód. Conta Crédito'] = release_letter_c['value'][index]
+                value = self.search_word(word_value_c, row)
+                if value != None:
+                    row['Cód. Conta Crédito'] = value
+
             else:
                 row['Cód. Conta Crédito'] = self.id_banco
+                value = self.search_word(word_value_d, row)
+                if value != None:
+                    row['Cód. Conta Débito'] = value
 
-            for id_emp, key_banco in self.relacoes.items():
-                if key_banco in str(row['Histórico']).lower():
-                    if  row['Cód. Conta Débito'] == '':
-                        row['Cód. Conta Débito'] = id_emp
-                    else:
-                        row['Cód. Conta Crédito'] = id_emp
-                    continue
+                # index = self.search_word(words_d, row)
+                # if index != None:
+                #     row['Cód. Conta Débito'] = release_letter_d['value'][index]
 
         return arquivo_novo
+
+    def search_word(self, words, row):
+        finding_word = str(row['Histórico']).lower()
+        for word, value in words:
+            if word in finding_word:
+                return value    
+        # for index, word in enumerate(words):
+            # if word in finded_word:
+            #     return index
+        return None
     
     def abrir(self, arquivo_final: pd.DataFrame):
         file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
@@ -1469,7 +1495,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def reference(self, id_bank: int) -> int:
         for widget, id_emp in self.companies_checkbox.items():
             if widget.isChecked():
-                return self.db.reference(id_bank, id_emp)
+                return self.db.reference(id_bank, id_emp)[1]
         return {}
 
     def bank(self) -> Bank:
