@@ -92,6 +92,11 @@ class DataBase:
             'WHERE id_companie = %s'
         )
 
+        self.delete_companie = (
+            f'DELETE FROM {self.COMPANIE_TABLE} '
+            'WHERE id_companie = %s ; '
+        )
+
         self.update_reference = (
             f'UPDATE {self.REFERENCE_TABLE} SET '
             'word = %(Palavra)s, value = %(Conta)s, '
@@ -112,6 +117,9 @@ class DataBase:
     
     def edit_companie(self, id, name):
         self.__request(self.update_companie, (name, id))
+
+    def remove_companie(self, id):
+        self.__request(self.delete_companie, (id,))
 
     def companie(self, id_bank: int) -> dict[int, str]:
         cursor = self.__request(self.query_companie, (id_bank,))
@@ -961,12 +969,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'companies': [
                 {
                     self.pushButton_add: self.add_companie,
-                    # self.pushButton_remove: self.remove_companie,
+                    self.pushButton_remove: self.remove_companie,
                     self.pushButton_update: self.updt_companie,
                     # self.pushButton_reload: self.fill_companie,
                     self.pushButton_confirm: self.confirm_companie,
-                    # self.pushButton_cancel:
-                    #     lambda: self.stackedWidget_reference.setCurrentIndex(0)
+                    self.pushButton_cancel: self.cancel_companie
                 },
                 {
                     self.pushButton_add: 'Adciona empresa a lista de empresas cadastradas',
@@ -1379,9 +1386,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def updt_companie(self):
         try:
             check_box = self.find_option()
-            if check_box == None:
-                raise Exception('Primeiro selecione a empresa')
-            
+            self.disable_option(check_box)
             check_box.hide()
             item = QLineEdit(text= check_box.text())
             # item.setFont(self.font)
@@ -1393,16 +1398,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.vbox.addWidget(item)
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
+            self.in_operation()
 
-    def find_option(self) -> QRadioButton | None:
-        hide = self.frame_operations.isHidden()
-        find = None
-        for widget in self.companies_checkbox.keys():
-            widget.setDisabled(hide)
-            if widget.isChecked():
-                find = widget
+    def remove_companie(self):
+        try:
+            self.disable_buttons()
+            checkbox = self.find_option()
+            if messagebox.askyesno('Aviso', self.message_remove) == False:
+                return None
             
-        return find
+            self.db.remove_companie(checkbox.__getattribute__('id'))
+            self.companies_checkbox.pop(checkbox)
+            checkbox.deleteLater()
+            self.disable_buttons()
+        except Exception as error:
+            messagebox.showwarning('Aviso', error)
+            self.disable_buttons()
+
+    def find_option(self):
+        for widget in self.companies_checkbox.keys():
+            if widget.isChecked():
+                return widget
+        raise Exception('Primeiro selecione a empresa')
+
+    def disable_option(self, exception: QRadioButton) -> QRadioButton:
+        hide = self.frame_operations.isHidden()
+        for widget in self.companies_checkbox.keys():
+            if widget != exception:
+                widget.setDisabled(hide)
 
     def confirm_companie(self):
         try:
@@ -1418,6 +1441,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.create_companie(id, name)
             else:
                 check_box = self.find_option()
+                self.disable_option(check_box)
                 if check_box.text() != name:
                     self.db.edit_companie(id, name)
                     check_box.setText(name)
@@ -1426,6 +1450,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             item.deleteLater()
         except Exception as error:
             messagebox.showwarning('Aviso', error)
+
+    def cancel_companie(self):
+        item = self.current_item_edited
+        id = item.__getattribute__('id')
+        if id != None:
+            check_box = self.find_option()
+            self.disable_option(check_box)
+            check_box.setHidden(False)
+        item.deleteLater()
 
     def companie_valid(self):
         hide = True
