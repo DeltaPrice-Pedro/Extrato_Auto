@@ -55,7 +55,7 @@ class DataBase:
             )
         
         self.columns_reference = [
-            'id_reference', 'word', 'value', 'release_letter' 
+            'id_reference', 'word', 'account', 'release_letter' 
         ]
 
         self.query_bank = (
@@ -76,7 +76,7 @@ class DataBase:
         self.insert_pedency = (
             f'INSERT INTO {self.REFERENCE_TABLE} '
             '(id_bank, id_companie, word, '
-            'value, release_letter) '
+            'account, release_letter) '
             'VALUES (%(id_bank)s, %(id_companie)s,'
             '%(Palavra)s, %(Conta)s, %(Lançamento)s)'
         )
@@ -99,7 +99,7 @@ class DataBase:
 
         self.update_reference = (
             f'UPDATE {self.REFERENCE_TABLE} SET '
-            'word = %(Palavra)s, value = %(Conta)s, '
+            'word = %(Palavra)s, account = %(Conta)s, '
             'release_letter = %(Lançamento)s '
             'WHERE id_reference = %(id_reference)s '
         )
@@ -152,9 +152,11 @@ class DataBase:
 
         #UPDATE
         if any(updt):
+            updt_list = []
             for id_reference, data in updt.items():
-                data['id_reference'] = id_reference
-            self.__request(self.update_reference, updt, True)
+                data[0]['id_reference'] = id_reference
+                updt_list.append(data[0])
+            self.__request(self.update_reference, updt_list, True)
 
         #REMOVE
         if any(remove):
@@ -864,20 +866,12 @@ class Gerador(QObject):
         arquivo_novo = arquivo_final.copy(True)
         df_release = pd.DataFrame(self.relacoes)
 
-        release_letter_c = df_release.loc[df_release['letter'] == 'C']
-        word_value_c = release_letter_c.loc[:, ['word','value']].values
-        # words_c = release_letter_c['word']
-
-        release_letter_d = df_release.loc[df_release['letter'] == 'D']
-        word_value_d = release_letter_d.loc[:, ['word','value']].values
-        # words_d = release_letter_d['word']
+        word_value_c = self.words_reference(df_release, 'C')
+        word_value_d = self.words_reference(df_release, 'D')
 
         for index, row in arquivo_novo.iterrows():
             if row['Inf.'] == 'C':
                 row['Cód. Conta Débito'] = self.id_banco
-                # index = self.search_word(words_c, row)
-                # if index != None:
-                #     row['Cód. Conta Crédito'] = release_letter_c['value'][index]
                 value = self.search_word(word_value_c, row)
                 if value != None:
                     row['Cód. Conta Crédito'] = value
@@ -888,20 +882,18 @@ class Gerador(QObject):
                 if value != None:
                     row['Cód. Conta Débito'] = value
 
-                # index = self.search_word(words_d, row)
-                # if index != None:
-                #     row['Cód. Conta Débito'] = release_letter_d['value'][index]
-
         return arquivo_novo
+    
+    def words_reference(self, df: pd.DataFrame, release: str):
+        df_release = df.loc[df['release_letter'] == release]
+        list_release = df_release.loc[:, ['word','account']].values
+        return list_release
 
     def search_word(self, words, row):
         finding_word = str(row['Histórico']).lower()
         for word, value in words:
-            if word in finding_word:
+            if word.lower() in finding_word:
                 return value    
-        # for index, word in enumerate(words):
-            # if word in finded_word:
-            #     return index
         return None
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -1370,7 +1362,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def alter_estado(self, cond: bool):
         self.exec_load(cond)
-        self.pushButton_executar.setDisabled(cond)
+        self.pushButton_execute.setDisabled(cond)
 
     def exec_load(self, action: bool):
         if action == True:
@@ -1406,7 +1398,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         for widget in self.companies_checkbox.keys():
             widget.deleteLater()
-            
+
         self.companies_checkbox.clear()
         for id_emp, nome_emp in empresas_disp.items():
             self.create_companie(id_emp, nome_emp)

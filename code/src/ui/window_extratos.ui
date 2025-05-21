@@ -236,22 +236,6 @@
                     </widget>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="pushButton_clear">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
-                       <horstretch>0</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="text">
-                      <string/>
-                     </property>
-                     <property name="icon">
-                      <iconset theme="QIcon::ThemeIcon::EditClear"/>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
                     <widget class="QPushButton" name="pushButton_reload">
                      <property name="sizePolicy">
                       <sizepolicy hsizetype="Maximum" vsizetype="Fixed">

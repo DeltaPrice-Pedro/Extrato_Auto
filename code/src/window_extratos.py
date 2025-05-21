@@ -148,24 +148,15 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_4.addWidget(self.line_2)
 
-        self.pushButton_clear = QPushButton(self.frame_5)
-        self.pushButton_clear.setObjectName(u"pushButton_clear")
+        self.pushButton_reload = QPushButton(self.frame_5)
+        self.pushButton_reload.setObjectName(u"pushButton_reload")
         sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         sizePolicy2.setHorizontalStretch(0)
         sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.pushButton_clear.sizePolicy().hasHeightForWidth())
-        self.pushButton_clear.setSizePolicy(sizePolicy2)
-        icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.EditClear))
-        self.pushButton_clear.setIcon(icon)
-
-        self.horizontalLayout_4.addWidget(self.pushButton_clear)
-
-        self.pushButton_reload = QPushButton(self.frame_5)
-        self.pushButton_reload.setObjectName(u"pushButton_reload")
         sizePolicy2.setHeightForWidth(self.pushButton_reload.sizePolicy().hasHeightForWidth())
         self.pushButton_reload.setSizePolicy(sizePolicy2)
-        icon1 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.SyncSynchronizing))
-        self.pushButton_reload.setIcon(icon1)
+        icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.SyncSynchronizing))
+        self.pushButton_reload.setIcon(icon)
 
         self.horizontalLayout_4.addWidget(self.pushButton_reload)
 
@@ -303,8 +294,8 @@ class Ui_MainWindow(object):
         font8.setFamilies([u"Bahnschrift"])
         font8.setPointSize(19)
         self.pushButton_6.setFont(font8)
-        icon2 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.HelpAbout))
-        self.pushButton_6.setIcon(icon2)
+        icon1 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.HelpAbout))
+        self.pushButton_6.setIcon(icon1)
 
         self.gridLayout_8.addWidget(self.pushButton_6, 0, 0, 1, 1)
 
@@ -389,8 +380,8 @@ class Ui_MainWindow(object):
         font11.setPointSize(12)
         font11.setWeight(QFont.ExtraLight)
         self.pushButton_exit.setFont(font11)
-        icon3 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoPrevious))
-        self.pushButton_exit.setIcon(icon3)
+        icon2 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoPrevious))
+        self.pushButton_exit.setIcon(icon2)
 
         self.gridLayout_6.addWidget(self.pushButton_exit, 0, 0, 1, 1)
 
@@ -438,32 +429,32 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.pushButton_add = QPushButton(self.frame)
         self.pushButton_add.setObjectName(u"pushButton_add")
-        icon4 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ListAdd))
-        self.pushButton_add.setIcon(icon4)
+        icon3 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ListAdd))
+        self.pushButton_add.setIcon(icon3)
         self.pushButton_add.setIconSize(QSize(20, 20))
 
         self.horizontalLayout.addWidget(self.pushButton_add)
 
         self.pushButton_remove = QPushButton(self.frame)
         self.pushButton_remove.setObjectName(u"pushButton_remove")
-        icon5 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ListRemove))
-        self.pushButton_remove.setIcon(icon5)
+        icon4 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ListRemove))
+        self.pushButton_remove.setIcon(icon4)
         self.pushButton_remove.setIconSize(QSize(20, 20))
 
         self.horizontalLayout.addWidget(self.pushButton_remove)
 
         self.pushButton_update = QPushButton(self.frame)
         self.pushButton_update.setObjectName(u"pushButton_update")
-        icon6 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.MailMessageNew))
-        self.pushButton_update.setIcon(icon6)
+        icon5 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.MailMessageNew))
+        self.pushButton_update.setIcon(icon5)
         self.pushButton_update.setIconSize(QSize(20, 20))
 
         self.horizontalLayout.addWidget(self.pushButton_update)
 
         self.pushButton_save = QPushButton(self.frame)
         self.pushButton_save.setObjectName(u"pushButton_save")
-        icon7 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.DocumentSave))
-        self.pushButton_save.setIcon(icon7)
+        icon6 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.DocumentSave))
+        self.pushButton_save.setIcon(icon6)
         self.pushButton_save.setIconSize(QSize(20, 20))
 
         self.horizontalLayout.addWidget(self.pushButton_save)
@@ -507,9 +498,9 @@ class Ui_MainWindow(object):
         font14.setFamilies([u"Lucida Fax"])
         font14.setPointSize(12)
         self.pushButton_upload.setFont(font14)
-        icon8 = QIcon()
-        icon8.addFile(u"../imgs/upload-icon.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.pushButton_upload.setIcon(icon8)
+        icon7 = QIcon()
+        icon7.addFile(u"../imgs/upload-icon.png", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
+        self.pushButton_upload.setIcon(icon7)
         self.pushButton_upload.setIconSize(QSize(65, 63))
 
         self.verticalLayout_3.addWidget(self.pushButton_upload)
@@ -539,8 +530,8 @@ class Ui_MainWindow(object):
         font15.setWeight(QFont.ExtraLight)
         font15.setItalic(True)
         self.pushButton_execute.setFont(font15)
-        icon9 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.DocumentSend))
-        self.pushButton_execute.setIcon(icon9)
+        icon8 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.DocumentSend))
+        self.pushButton_execute.setIcon(icon8)
 
         self.horizontalLayout_2.addWidget(self.pushButton_execute)
 
@@ -626,7 +617,6 @@ class Ui_MainWindow(object):
         self.label_titulo.setText(QCoreApplication.translate("MainWindow", u"Gerador de Extratos", None))
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Escolha o Banco", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Empresas Dispon\u00edveis", None))
-        self.pushButton_clear.setText("")
         self.pushButton_reload.setText("")
         self.label_companie_info.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
