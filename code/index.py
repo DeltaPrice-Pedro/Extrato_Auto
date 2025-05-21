@@ -181,6 +181,9 @@ class File:
     def __init__(self):
         self.path = ''
 
+    def is_uploaded(self):
+        return True if self.path != '' else False
+
     def simple_read(self, pg = 'all', header = True) -> list[pd.DataFrame]:
         if header == False:
             return tb.read_pdf(self.path, pages= pg, stream=True, encoding="ISO-8859-1", pandas_options={'header': None})
@@ -1323,7 +1326,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return data
 
     def execute(self):
-        try:       
+        try:  
+            if self.arquivo.is_uploaded() == False:
+                   raise FileNotFoundError() 
+            
+            if self.has_change() == True:
+                raise Exception('Antes de executar, salve as alterações feitas ou as descarte clicando em "voltar"')
+
             id_bank = self.dict_bank_text.get(self.comboBox.currentText())
             reference = self.reference(id_bank)
             bank = self.bank()
@@ -1349,7 +1358,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         except PermissionError:
             messagebox.showerror(title='Aviso', message= 'Feche o arquivo gerado antes de criar outro')
         except FileNotFoundError:
-            messagebox.showerror(title='Aviso', message= "Arquivo indisponível")
+            messagebox.showerror(title='Aviso', message= "Primeiro, faça upload do extrato desejado")
         except Exception as error:
             messagebox.showerror(title='Aviso', message= error)
         finally:

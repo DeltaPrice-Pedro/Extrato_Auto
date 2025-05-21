@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(667, 683)
+        MainWindow.resize(667, 697)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout_3 = QGridLayout(self.centralwidget)
@@ -203,7 +203,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollAreaLayout = QWidget()
         self.scrollAreaLayout.setObjectName(u"scrollAreaLayout")
-        self.scrollAreaLayout.setGeometry(QRect(0, 0, 366, 120))
+        self.scrollAreaLayout.setGeometry(QRect(0, 0, 366, 134))
         sizePolicy6 = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         sizePolicy6.setHorizontalStretch(0)
         sizePolicy6.setVerticalStretch(0)
@@ -233,17 +233,6 @@ class Ui_MainWindow(object):
         self.page_4.setObjectName(u"page_4")
         self.gridLayout_6 = QGridLayout(self.page_4)
         self.gridLayout_6.setObjectName(u"gridLayout_6")
-        self.label_current_companie = QLabel(self.page_4)
-        self.label_current_companie.setObjectName(u"label_current_companie")
-        font5 = QFont()
-        font5.setFamilies([u"Bahnschrift"])
-        font5.setPointSize(14)
-        font5.setBold(True)
-        self.label_current_companie.setFont(font5)
-        self.label_current_companie.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        self.gridLayout_6.addWidget(self.label_current_companie, 0, 1, 1, 1)
-
         self.stackedWidget_reference = QStackedWidget(self.page_4)
         self.stackedWidget_reference.setObjectName(u"stackedWidget_reference")
         self.page_6 = QWidget()
@@ -253,25 +242,25 @@ class Ui_MainWindow(object):
         self.table_reference = QTableWidget(self.page_6)
         if (self.table_reference.columnCount() < 3):
             self.table_reference.setColumnCount(3)
-        font6 = QFont()
-        font6.setFamilies([u"Bahnschrift"])
-        font6.setPointSize(14)
-        font6.setWeight(QFont.Light)
+        font5 = QFont()
+        font5.setFamilies([u"Bahnschrift"])
+        font5.setPointSize(14)
+        font5.setWeight(QFont.Light)
         __qtablewidgetitem = QTableWidgetItem()
-        __qtablewidgetitem.setFont(font6);
+        __qtablewidgetitem.setFont(font5);
         self.table_reference.setHorizontalHeaderItem(0, __qtablewidgetitem)
         __qtablewidgetitem1 = QTableWidgetItem()
-        __qtablewidgetitem1.setFont(font6);
+        __qtablewidgetitem1.setFont(font5);
         self.table_reference.setHorizontalHeaderItem(1, __qtablewidgetitem1)
         __qtablewidgetitem2 = QTableWidgetItem()
-        __qtablewidgetitem2.setFont(font6);
+        __qtablewidgetitem2.setFont(font5);
         self.table_reference.setHorizontalHeaderItem(2, __qtablewidgetitem2)
         self.table_reference.setObjectName(u"table_reference")
         self.table_reference.setMinimumSize(QSize(350, 0))
-        font7 = QFont()
-        font7.setFamilies([u"Bahnschrift"])
-        font7.setPointSize(12)
-        self.table_reference.setFont(font7)
+        font6 = QFont()
+        font6.setFamilies([u"Bahnschrift"])
+        font6.setPointSize(12)
+        self.table_reference.setFont(font6)
         self.table_reference.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table_reference.setAlternatingRowColors(True)
         self.table_reference.setSortingEnabled(True)
@@ -290,10 +279,10 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.pushButton_6.sizePolicy().hasHeightForWidth())
         self.pushButton_6.setSizePolicy(sizePolicy)
         self.pushButton_6.setMaximumSize(QSize(23, 23))
-        font8 = QFont()
-        font8.setFamilies([u"Bahnschrift"])
-        font8.setPointSize(19)
-        self.pushButton_6.setFont(font8)
+        font7 = QFont()
+        font7.setFamilies([u"Bahnschrift"])
+        font7.setPointSize(19)
+        self.pushButton_6.setFont(font7)
         icon1 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.HelpAbout))
         self.pushButton_6.setIcon(icon1)
 
@@ -306,11 +295,11 @@ class Ui_MainWindow(object):
         sizePolicy7.setVerticalStretch(0)
         sizePolicy7.setHeightForWidth(self.label_5.sizePolicy().hasHeightForWidth())
         self.label_5.setSizePolicy(sizePolicy7)
-        font9 = QFont()
-        font9.setFamilies([u"Bahnschrift"])
-        font9.setPointSize(12)
-        font9.setWeight(QFont.Thin)
-        self.label_5.setFont(font9)
+        font8 = QFont()
+        font8.setFamilies([u"Bahnschrift"])
+        font8.setPointSize(12)
+        font8.setWeight(QFont.Thin)
+        self.label_5.setFont(font8)
         self.label_5.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.gridLayout_8.addWidget(self.label_5, 0, 1, 1, 1)
@@ -320,10 +309,10 @@ class Ui_MainWindow(object):
         sizePolicy2.setHeightForWidth(self.lineEdit_word.sizePolicy().hasHeightForWidth())
         self.lineEdit_word.setSizePolicy(sizePolicy2)
         self.lineEdit_word.setMaximumSize(QSize(150, 16777215))
-        font10 = QFont()
-        font10.setFamilies([u"Bahnschrift"])
-        font10.setPointSize(16)
-        self.lineEdit_word.setFont(font10)
+        font9 = QFont()
+        font9.setFamilies([u"Bahnschrift"])
+        font9.setPointSize(16)
+        self.lineEdit_word.setFont(font9)
 
         self.gridLayout_8.addWidget(self.lineEdit_word, 0, 2, 1, 1)
 
@@ -334,13 +323,14 @@ class Ui_MainWindow(object):
         sizePolicy8.setVerticalStretch(0)
         sizePolicy8.setHeightForWidth(self.spinBox_value.sizePolicy().hasHeightForWidth())
         self.spinBox_value.setSizePolicy(sizePolicy8)
-        self.spinBox_value.setFont(font10)
+        self.spinBox_value.setFont(font9)
+        self.spinBox_value.setMaximum(99999999)
 
         self.gridLayout_8.addWidget(self.spinBox_value, 1, 2, 1, 1)
 
         self.label_6 = QLabel(self.page_7)
         self.label_6.setObjectName(u"label_6")
-        self.label_6.setFont(font9)
+        self.label_6.setFont(font8)
         self.label_6.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.gridLayout_8.addWidget(self.label_6, 2, 0, 1, 2)
@@ -351,7 +341,7 @@ class Ui_MainWindow(object):
         self.comboBox_release.setObjectName(u"comboBox_release")
         sizePolicy2.setHeightForWidth(self.comboBox_release.sizePolicy().hasHeightForWidth())
         self.comboBox_release.setSizePolicy(sizePolicy2)
-        self.comboBox_release.setFont(font10)
+        self.comboBox_release.setFont(font9)
 
         self.gridLayout_8.addWidget(self.comboBox_release, 2, 2, 1, 1)
 
@@ -362,28 +352,57 @@ class Ui_MainWindow(object):
         sizePolicy9.setVerticalStretch(0)
         sizePolicy9.setHeightForWidth(self.label_7.sizePolicy().hasHeightForWidth())
         self.label_7.setSizePolicy(sizePolicy9)
-        self.label_7.setFont(font9)
+        self.label_7.setFont(font8)
         self.label_7.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.gridLayout_8.addWidget(self.label_7, 1, 1, 1, 1)
 
         self.stackedWidget_reference.addWidget(self.page_7)
 
-        self.gridLayout_6.addWidget(self.stackedWidget_reference, 1, 0, 1, 2)
+        self.gridLayout_6.addWidget(self.stackedWidget_reference, 2, 0, 1, 2)
 
         self.pushButton_exit = QPushButton(self.page_4)
         self.pushButton_exit.setObjectName(u"pushButton_exit")
         sizePolicy2.setHeightForWidth(self.pushButton_exit.sizePolicy().hasHeightForWidth())
         self.pushButton_exit.setSizePolicy(sizePolicy2)
-        font11 = QFont()
-        font11.setFamilies([u"Bahnschrift"])
-        font11.setPointSize(12)
-        font11.setWeight(QFont.ExtraLight)
-        self.pushButton_exit.setFont(font11)
+        font10 = QFont()
+        font10.setFamilies([u"Bahnschrift"])
+        font10.setPointSize(12)
+        font10.setWeight(QFont.ExtraLight)
+        self.pushButton_exit.setFont(font10)
         icon2 = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.GoPrevious))
         self.pushButton_exit.setIcon(icon2)
 
         self.gridLayout_6.addWidget(self.pushButton_exit, 0, 0, 1, 1)
+
+        self.frame_7 = QFrame(self.page_4)
+        self.frame_7.setObjectName(u"frame_7")
+        self.frame_7.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_7.setFrameShadow(QFrame.Shadow.Raised)
+        self.verticalLayout_6 = QVBoxLayout(self.frame_7)
+        self.verticalLayout_6.setSpacing(0)
+        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
+        self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
+        self.label_current_companie = QLabel(self.frame_7)
+        self.label_current_companie.setObjectName(u"label_current_companie")
+        font11 = QFont()
+        font11.setFamilies([u"Bahnschrift"])
+        font11.setPointSize(14)
+        font11.setBold(True)
+        self.label_current_companie.setFont(font11)
+        self.label_current_companie.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout_6.addWidget(self.label_current_companie)
+
+        self.label = QLabel(self.frame_7)
+        self.label.setObjectName(u"label")
+        self.label.setFont(font6)
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout_6.addWidget(self.label)
+
+
+        self.gridLayout_6.addWidget(self.frame_7, 0, 1, 1, 1)
 
         self.stackedWidget_companie.addWidget(self.page_4)
 
@@ -627,7 +646,6 @@ class Ui_MainWindow(object):
 "</style></head><body style=\" font-family:'Segoe UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:10pt; font-style:italic;\">clique 2x com o bot\u00e3o </span><span style=\" font-size:10pt; font-weight:700; font-style:italic; text-decoration: underline;\">direito</span><span style=\" font-size:10pt; font-style:italic;\"> para selecionar</span></p></body></html>", None))
         self.label_aviso.setText(QCoreApplication.translate("MainWindow", u"Primeiramente, escolha o banco", None))
-        self.label_current_companie.setText(QCoreApplication.translate("MainWindow", u"Empresa", None))
         ___qtablewidgetitem = self.table_reference.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Palavra", None));
         ___qtablewidgetitem1 = self.table_reference.horizontalHeaderItem(1)
@@ -643,6 +661,15 @@ class Ui_MainWindow(object):
 
         self.label_7.setText(QCoreApplication.translate("MainWindow", u"Valor", None))
         self.pushButton_exit.setText(QCoreApplication.translate("MainWindow", u"Voltar", None))
+        self.label_current_companie.setText(QCoreApplication.translate("MainWindow", u"Empresa", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"hr { height: 1px; border-width: 0; }\n"
+"li.unchecked::marker { content: \"\\2610\"; }\n"
+"li.checked::marker { content: \"\\2612\"; }\n"
+"</style></head><body style=\" font-family:'Segoe UI'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:10pt; font-style:italic;\">clique 2x para selecionar</span></p></body></html>", None))
         self.pushButton_cancel.setText(QCoreApplication.translate("MainWindow", u"Cancelar", None))
         self.pushButton_confirm.setText(QCoreApplication.translate("MainWindow", u"Confirmar", None))
         self.pushButton_add.setText("")
