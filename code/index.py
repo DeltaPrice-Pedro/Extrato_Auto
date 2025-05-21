@@ -1080,6 +1080,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if messagebox.askyesno('Aviso', self.message_exit_save) == False:
                 return None
         
+        self.pushButton_save.setHidden(True)
+        self.pushButton_update.setHidden(False)
         self.stackedWidget_companie.setCurrentIndex(0)
         self.switch_focus('companies')
 
@@ -1464,7 +1466,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return widget
         raise Exception('Primeiro selecione a empresa')
 
-    def disable_option(self) -> QRadioButton:
+    def disable_option(self):
         disable = self.disable_status
         self.disable_status = not disable
         for widget in self.companies_checkbox.keys():
@@ -1484,12 +1486,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.create_companie(id, name)
             else:
                 check_box = self.find_option()
-                self.disable_option()
                 if check_box.text() != name:
                     self.db.edit_companie(id, name)
                     check_box.setText(name)
                 check_box.setHidden(False)
 
+            self.disable_option()
             item.deleteLater()
         except Exception as error:
             messagebox.showwarning('Aviso', error)
