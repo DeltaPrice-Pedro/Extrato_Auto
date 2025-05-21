@@ -1013,6 +1013,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         }
 
         self.enable_status = True
+        self.extend_disable = [
+            self.pushButton_upload,
+            self.comboBox
+        ]
         self.ref_disable_btns = [
             self.pushButton_add,
             self.pushButton_remove,
@@ -1022,7 +1026,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.pushButton_exit,
             self.pushButton_reload,
         ]
-        self.disable_buttons()
+        self.disable_buttons(False)
         self.label_companie_info.hide()
         self.frame_operations.hide()
         self.switch_focus('companies')
@@ -1095,9 +1099,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         hide = not self.frame_operations.isHidden()
         self.frame_operations.setHidden(hide)
         
-    def disable_buttons(self):
+    def disable_buttons(self, extend = True):
         self.enable_status = not self.enable_status
-        for item in self.ref_disable_btns:
+        disable_list = self.ref_disable_btns 
+        if extend == True:
+            disable_list.extend(self.extend_disable)
+
+        for item in disable_list:
             item.setEnabled(self.enable_status) 
 
     def switch_focus(self, current_widget: str):
@@ -1442,9 +1450,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def remove_companie(self):
         try:
-            checkbox = self.find_option()
             self.disable_buttons()
             self.disable_option()
+            checkbox = self.find_option()
             if messagebox.askyesno('Aviso', self.message_remove) == False:
                 self.disable_buttons()
                 self.disable_option()
