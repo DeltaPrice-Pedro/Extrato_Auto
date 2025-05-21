@@ -914,6 +914,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.db = DataBase()
         self.companies_checkbox = {}
         self.min_carc_companie = 6
+        self.disable_status = True
 
         self.message_select = 'Primeiro, clique 1 vez na empresa que deseja {0}'
         self.message_remove = 'Confirma a remoção desta empresa?\nTodas suas contas cadastradas também serão excluídas'
@@ -921,9 +922,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.message_no_save = 'Não há alterações a serem salvas'
         self.message_exit_save = 'Tem certeza que deseja sair da referência SEM SALVAR as mudanças feitas nela?\n\nCaso não queira PERDER as alterações, selecione "não" e as salve'
 
-        self.font = QFont()
-        self.font.setFamilies([u"Bahnschrift"])
-        self.font.setPointSize(12)
+        self.font_text = QFont()
+        self.font_text.setFamilies([u"Bahnschrift"])
+        self.font_text.setPointSize(12)
 
         self.current_operation = ''
         self.ref_operation = {
@@ -985,7 +986,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.pushButton_add: self.add_companie,
                     self.pushButton_remove: self.remove_companie,
                     self.pushButton_update: self.updt_companie,
-                    # self.pushButton_reload: self.fill_companie,
+                    self.pushButton_reload: self.fill_companie,
                     self.pushButton_confirm: self.confirm_companie,
                     self.pushButton_cancel: self.cancel_companie
                 },
@@ -993,6 +994,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.pushButton_add: 'Adciona empresa a lista de empresas cadastradas',
                     self.pushButton_remove: 'Remove empresa cadastrada',
                     self.pushButton_update: 'Edita o nome de empresa cadastrada',
+                    self.pushButton_reload: 'Recarrega as empresas salvas no servidor',
                 }
             ],
             'reference': [
@@ -1000,7 +1002,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.pushButton_add: self.add_reference,
                     self.pushButton_remove: self.remove_reference,
                     self.pushButton_save: self.save_reference,
-                    # self.pushButton_reload: self.fill_reference,
+                    self.pushButton_reload: lambda : self.fill_reference(
+                        self.dict_bank_text[
+                            self.comboBox.currentText()
+                        ]
+                    ),
                     self.pushButton_confirm: self.confirm_reference,
                     self.pushButton_cancel:
                         lambda: self.stackedWidget_reference.setCurrentIndex(0)
@@ -1009,7 +1015,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.pushButton_add: 'Adciona imposto a lista de impostos cadastrados',
                     self.pushButton_remove: 'Remove imposto cadastrado',
                     self.pushButton_save: 'Edita o nome de imposto cadastrado',
-                    # self.pushButton_reload: '',
+                    self.pushButton_reload: 'Recarrega a relações de palavra do servidor',
                 }
             ]
         }
@@ -1021,7 +1027,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.pushButton_save,
             self.pushButton_update,
             self.pushButton_execute,
-            self.pushButton_exit
+            self.pushButton_exit,
+            self.pushButton_reload,
         ]
         self.disable_buttons()
         self.label_companie_info.hide()
@@ -1074,9 +1081,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_update.clicked.connect(self.in_operation)
         self.pushButton_cancel.clicked.connect(self.in_operation)
         self.pushButton_confirm.clicked.connect(self.in_operation)
-        
         self.pushButton_exit.clicked.connect(self.exit)
-
+            
     def exit(self):
         if self.has_change():
             if messagebox.askyesno('Aviso', self.message_exit_save) == False:
@@ -1182,6 +1188,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return resp
     
     def updt_reference(self):
+        self.in_operation()
         item = self.table_reference.selectedItems()[0]
         row = item.row()
         for column in range(self.table_reference.columnCount()):
@@ -1397,6 +1404,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.dict_bank_text[self.comboBox.currentText()]
         )
 
+        for widget in self.companies_checkbox.keys():
+            widget.deleteLater()
+            
         self.companies_checkbox.clear()
         for id_emp, nome_emp in empresas_disp.items():
             self.create_companie(id_emp, nome_emp)
@@ -1409,9 +1419,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.vbox.addWidget(item)
 
     def add_companie(self):
+        self.disable_option()
         self.pushButton_confirm.hide()
         item = QLineEdit(placeholderText='Nome da empresa (min. 6 caracteres)')
-        # item.setFont(self.font)
+        item.setFont(self.font_text)
         item.__setattr__('id', None)
         item.textChanged.connect(self.companie_valid)
         
@@ -1421,10 +1432,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def updt_companie(self):
         try:
             check_box = self.find_option()
-            self.disable_option(check_box)
+            self.disable_option()
             check_box.hide()
             item = QLineEdit(text= check_box.text())
-            # item.setFont(self.font)
+            item.setFont(self.font_text)
             item.__setattr__('id', check_box.__getattribute__('id'))
             item.textChanged.connect(self.companie_valid)
 
@@ -1437,18 +1448,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def remove_companie(self):
         try:
-            self.disable_buttons()
             checkbox = self.find_option()
+            self.disable_buttons()
+            self.disable_option()
             if messagebox.askyesno('Aviso', self.message_remove) == False:
+                self.disable_buttons()
+                self.disable_option()
                 return None
             
             self.db.remove_companie(checkbox.__getattribute__('id'))
             self.companies_checkbox.pop(checkbox)
             checkbox.deleteLater()
             self.disable_buttons()
+            self.disable_option()
         except Exception as error:
             messagebox.showwarning('Aviso', error)
             self.disable_buttons()
+            self.disable_option()
 
     def find_option(self):
         for widget in self.companies_checkbox.keys():
@@ -1456,11 +1472,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 return widget
         raise Exception('Primeiro selecione a empresa')
 
-    def disable_option(self, exception: QRadioButton) -> QRadioButton:
-        hide = self.frame_operations.isHidden()
+    def disable_option(self) -> QRadioButton:
+        disable = self.disable_status
+        self.disable_status = not disable
         for widget in self.companies_checkbox.keys():
-            if widget != exception:
-                widget.setDisabled(hide)
+            widget.setDisabled(disable)
 
     def confirm_companie(self):
         try:
@@ -1476,7 +1492,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.create_companie(id, name)
             else:
                 check_box = self.find_option()
-                self.disable_option(check_box)
+                self.disable_option()
                 if check_box.text() != name:
                     self.db.edit_companie(id, name)
                     check_box.setText(name)
@@ -1491,8 +1507,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         id = item.__getattribute__('id')
         if id != None:
             check_box = self.find_option()
-            self.disable_option(check_box)
             check_box.setHidden(False)
+        self.disable_option()
         item.deleteLater()
 
     def companie_valid(self):
