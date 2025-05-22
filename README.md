@@ -1,15 +1,14 @@
-# setuptools====70.3.0
-e 
-# importlib_resources==4.0.0
+# Melhorias
 
-estão na versão desatualizada para funcionarem no pyinstaller
+- Tela de loading para enquanto o extrato é gerado
+- Abrir diretamente o arquivo, para no excel, a pessoa escolha em salvar ou não
+- Funcionalidade de isolar C e D em arquivos diferentes
+- Layout mais bonito e agradável
+- Identificar o banco automaticamente pelo nome do arquivo
 
-# Jinja2
+>> Foque primeiramente na funcionalidade, para só então, otimizar processos e estéticas
 
-solicitado na hora do pyinstaller, instaldo com pip semp problemas
+# Modularizações
 
-# Openpyxl
-
-Solicitado para abrir arquivos xlsx, necessário
-
-# NUNCA INSTALE MÓDULOS SEM QUE SEJAM PEDIDOS
+- Juntar ou fazer assimiliar processos de diferentes bancos na classe Banco
+- 
