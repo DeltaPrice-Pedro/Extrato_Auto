@@ -835,7 +835,7 @@ class PagBank(Bank):
         self.df = self.df[self.df.Data != '']
         self.df = self.df[self.df.Data.apply(lambda x: x[0].isnumeric())]
 
-class Gerador(QObject):
+class Generator(QObject):
     inicio = Signal(bool)
     fim = Signal(bool)
     open = Signal(pd.DataFrame)
@@ -1336,7 +1336,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             id_bank = self.dict_bank_text.get(self.comboBox.currentText())
             reference = self.reference(id_bank)
             bank = self.bank()
-            self._gerador = Gerador(
+            self._gerador = Generator(
                 bank,
                 self.arquivo,
                 id_bank,
