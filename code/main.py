@@ -6,7 +6,7 @@ from PySide6.QtGui import (
     QPixmap, QIcon, QMovie, Qt, QFont, QMouseEvent, QBrush, QColor
 )
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from src.window_extratos import Ui_MainWindow
+from code.window_extratos import Ui_MainWindow
 from PySide6.QtCore import QThread, QSize
 from banco_do_brasil import BancoDoBrasil
 from mercado_pago import MercadoPago

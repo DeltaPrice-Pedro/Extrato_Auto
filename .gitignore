@@ -1,8 +1,8 @@
 /venv
+/code/__pycache__
 /code/src/__pycache__
 /build
 /dist
-/code/src/__pycache__
 *.spec
 *.xlsx
 *.env
