@@ -11,4 +11,3 @@
 # Modularizações
 
 - Juntar ou fazer assimiliar processos de diferentes bancos na classe Banco
-- 
