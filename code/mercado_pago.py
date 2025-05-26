@@ -3,11 +3,17 @@ from file import File
 import pandas as pd
 
 class MercadoPago(Bank):
+    """
+    Classe para processamento de extratos do Mercado Pago.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'Mercado Pago'
 
     def gerar_extrato(self, arquivo: File):
+        """
+        Gera o extrato do Mercado Pago a partir do arquivo fornecido.
+        """
         qnt_pages = arquivo.lenght()
 
         tabela1 = arquivo.custom_read(area_lida=[27,0,100,100], pg=1)
@@ -25,6 +31,9 @@ class MercadoPago(Bank):
         return self.df
 
     def __filtro_linhas(self):
+        """
+        Ajusta linhas do extrato do Mercado Pago.
+        """
         lista_tabelas = []
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():

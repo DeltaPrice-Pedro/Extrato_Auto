@@ -3,11 +3,17 @@ from file import File
 import pandas as pd
 
 class Sicoob(Bank):
+    """
+    Classe para processamento de extratos do Sicoob.
+    """
     def __init__(self):
      super().__init__()
      self.titulo = 'Sicoob'
 
     def buscarLinhaPai(self,index, tabela):
+        """
+        Busca a linha pai (com data) para concatenação de históricos.
+        """
         linhaAcima = tabela.iloc[index]
         if linhaAcima['Data'] != '':
             #se tiver data, é a linha pai
@@ -16,6 +22,9 @@ class Sicoob(Bank):
         return self.buscarLinhaPai(index - 1, tabela)
 
     def gerar_extrato(self, arquivo: File):
+        """
+        Gera o extrato do Sicoob a partir do arquivo fornecido.
+        """
         qnt_pages = arquivo.lenght()
         
         # if qnt_pages == 1:
@@ -32,6 +41,9 @@ class Sicoob(Bank):
         return self.df
 
     def opcao_simples(self, arquivo: File, qnt_pages: int) -> list[pd.DataFrame]:
+        """
+        Lê o extrato do Sicoob no modo simples.
+        """
         # index = 100
         # tabela1 = arquivo.leitura_custom([13,0,75,100])
         # while len(tabela1[0].iloc[2,0]) > 10:
@@ -58,6 +70,9 @@ class Sicoob(Bank):
         return table_cplt
 
     def opcao_completa(self, arquivo: File, qnt_pages: int) -> list[pd.DataFrame]:
+        """
+        Lê o extrato do Sicoob no modo completo.
+        """
         ver_incolor = False
         tabela1 = arquivo.custom_read(area_lida=[15,0,100,94], pg=1)[0]
         
@@ -90,6 +105,9 @@ class Sicoob(Bank):
         return arquivo_complt
 
     def __filt_linhas(self):
+        """
+        Ajusta linhas do extrato do Sicoob, concatenando históricos e filtrando linhas inválidas.
+        """
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():
             if row['Data'] == ''\

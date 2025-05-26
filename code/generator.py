@@ -6,11 +6,17 @@ from file import File
 import pandas as pd
 
 class Generator(QObject):
+    """
+    Classe responsável por gerar o extrato processado e emitir sinais para a interface.
+    """
     inicio = Signal(bool)
     fim = Signal(bool)
     open = Signal(pd.DataFrame)
 
     def __init__(self, banco: Bank, arquivo: File, id_banco: int, relacoes: dict[int, str]) -> None:
+        """
+        Inicializa o gerador com o banco, arquivo, id do banco e relações de referência.
+        """
         super().__init__()
         self.banco = banco
         self.arquivo = arquivo
@@ -18,6 +24,9 @@ class Generator(QObject):
         self.relacoes = relacoes
 
     def extrato(self):
+        """
+        Executa o processamento do extrato e emite sinais para a interface.
+        """
         try:
             self.inicio.emit(True)
             arquivo_final = self.banco.gerar_extrato(self.arquivo)
@@ -35,6 +44,9 @@ class Generator(QObject):
             self.fim.emit(False)
 
     def prog_contabil(self, arquivo_final: pd.DataFrame):
+        """
+        Aplica as relações contábeis ao DataFrame do extrato.
+        """
         #relações = listas de word, value, release_letter
         arquivo_novo = arquivo_final.copy(True)
         df_release = pd.DataFrame(self.relacoes)
@@ -58,11 +70,17 @@ class Generator(QObject):
         return arquivo_novo
     
     def words_reference(self, df: pd.DataFrame, release: str):
+        """
+        Filtra as referências por tipo de lançamento (C/D).
+        """
         df_release = df.loc[df['release_letter'] == release]
         list_release = df_release.loc[:, ['word','account']].values
         return list_release
 
     def search_word(self, words, row):
+        """
+        Busca a palavra-chave no histórico da linha.
+        """
         finding_word = str(row['Histórico']).lower()
         for word, value in words:
             if word.lower() in finding_word:

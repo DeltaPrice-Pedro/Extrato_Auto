@@ -2,11 +2,17 @@ from bank import Bank
 from file import File
 
 class BancoDoBrasil(Bank):
+    """
+    Classe para processamento de extratos do Banco do Brasil.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'Banco do Brasil'
 
     def gerar_extrato(self, arquivo: File):
+        """
+        Gera o extrato do Banco do Brasil a partir do arquivo fornecido.
+        """
         qnt_pages = arquivo.lenght()
 
         tabela1 = arquivo.custom_read(area_lida=[25,0,98,90], pg=1, header=False)
@@ -25,6 +31,9 @@ class BancoDoBrasil(Bank):
         return self.df[self.df['Valor'] != 0.0]
 
     def __filt_linhas(self):
+        """
+        Ajusta linhas do DataFrame, tratando linhas sem data e concatenando históricos.
+        """
         self.df.fillna(0.0, inplace=True)
         for index, row in self.df.iterrows():
             self.df.loc[[index],['Data']] = str(row['Data'])[:10]

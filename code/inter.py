@@ -3,7 +3,13 @@ from bank import Bank
 import pandas as pd
 
 class IColorido_Inter():
+    """
+    Classe para processamento do extrato colorido do Banco Inter.
+    """
     def extrato(self, arquivo: File):
+        """
+        Processa o extrato colorido do Banco Inter.
+        """
         qnt_pages = arquivo.lenght()
 
         tabela1 = arquivo.custom_read(area_lida=[27,0,90,100], pg=1, header=False)
@@ -22,6 +28,9 @@ class IColorido_Inter():
         return self.df
 
     def __filtro_linhas(self):
+        """
+        Ajusta linhas do extrato colorido do Inter.
+        """
         lista_tabelas = []
         data_atual = ''
         self.df.fillna('', inplace=True)
@@ -40,7 +49,13 @@ class IColorido_Inter():
         self.df = pd.concat(lista_tabelas, ignore_index=True)
 
 class IClassico_Inter():
+    """
+    Classe para processamento do extrato clássico do Banco Inter.
+    """
     def extrato(self, arquivo: File):
+        """
+        Processa o extrato clássico do Banco Inter.
+        """
         self.filt_colunas(
             arquivo.custom_read(area_lida= [0,0,100,77], header=False),["Data", "Valor"])
         self.__inserir_espacos()
@@ -54,6 +69,9 @@ class IClassico_Inter():
         return self.df.reset_index(drop=True)
 
     def __inserir_espacos(self):
+        """
+        Insere colunas e ajusta a ordem para o extrato clássico do Inter.
+        """
         #Trocar a posição de "Histórico" e "Valor"
         self.df.insert(1,'Histórico', self.df.pop('Data'))
 
@@ -65,6 +83,9 @@ class IClassico_Inter():
         self.df = self.df.drop([0,1,2,3,4]).reset_index(drop=True)
 
     def __col_data(self):
+        """
+        Adiciona coluna de data ao DataFrame.
+        """
         coluna_data = []
         data = ''
         #Adcionar coluna data
@@ -80,11 +101,17 @@ class IClassico_Inter():
         self.df.insert(0,'Data',coluna_data) 
 
 class Inter(Bank, IClassico_Inter, IColorido_Inter):
+    """
+    Classe principal para processamento de extratos do Banco Inter.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'Inter'
 
     def tipo(self, arquivo: File):
+        """
+        Determina o tipo de extrato (colorido ou clássico).
+        """
         arquivo_teste = arquivo.custom_read(area_lida=[0,0,100,77], pg=1, header=False)
         arquivo_teste[0].fillna('', inplace=True)
 
@@ -93,6 +120,9 @@ class Inter(Bank, IClassico_Inter, IColorido_Inter):
         return False
 
     def gerar_extrato(self, arquivo):
+        """
+        Gera o extrato do Inter conforme o tipo detectado.
+        """
         if self.tipo(arquivo) == True:
             return IColorido_Inter.extrato(self, arquivo)
         return IClassico_Inter.extrato(self, arquivo)

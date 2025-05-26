@@ -3,11 +3,17 @@ from file import File
 import pandas as pd
 
 class Bradesco(Bank):
+    """
+    Classe para processamento de extratos do Bradesco.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'Bradesco'
 
     def gerar_extrato(self, arquivo: File):
+        """
+        Gera o extrato do Bradesco a partir do arquivo fornecido.
+        """
         qnt_pages = arquivo.lenght()
 
         tabela1 = arquivo.custom_read(area_lida=[25,0,100,80], pg=1)
@@ -27,6 +33,9 @@ class Bradesco(Bank):
         return self.df
 
     def __filtro_colunas(self, arquivo):
+        """
+        Ajusta as colunas dos DataFrames conforme o padrão do Bradesco.
+        """
         for tabelas in arquivo:
             if len(tabelas.columns) != 6:
                 tabelas.columns = ["Data", "Histórico", "Crédito", "Débito", ""]
@@ -37,6 +46,9 @@ class Bradesco(Bank):
         self.df = self.df.drop('', axis=1)
 
     def __col_inf(self):
+        """
+        Cria as colunas 'Inf.' e 'Valor' baseadas nos valores de crédito e débito.
+        """
         coluna_inf = []
         coluna_valor = []
         self.df.fillna('', inplace=True)
@@ -57,6 +69,9 @@ class Bradesco(Bank):
         self.df = self.df.drop('Crédito', axis=1)
 
     def __col_data(self):
+        """
+        Preenche datas ausentes com a última data válida.
+        """
         data_atual = ''
         for index, row in self.df.iterrows():
             if str(row['Data']) == '':
@@ -65,6 +80,9 @@ class Bradesco(Bank):
                 data_atual = str(row['Data'])
 
     def __filtro_linhas(self):
+        """
+        Ajusta linhas sem histórico e filtra linhas inválidas.
+        """
         for index, row in self.df.iterrows():
             if str(row['Histórico']) == '' or\
                 str(row['Histórico'])[0].isnumeric():

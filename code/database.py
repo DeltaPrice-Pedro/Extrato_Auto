@@ -3,11 +3,17 @@ from changes import Change
 from os import getenv
 
 class DataBase:
+    """
+    Classe responsável pela conexão e manipulação do banco de dados MySQL.
+    """
     COMPANIE_TABLE = 'Companie'
     BANK_TABLE = 'Bank'
     REFERENCE_TABLE = 'Reference'
 
     def __init__(self) -> None:
+        """
+        Inicializa a conexão com o banco de dados e define queries SQL.
+        """
         self.connection = connect(
                 host= getenv('IP_HOST'),
                 port= int(getenv('PORT_HOST')),
@@ -74,26 +80,44 @@ class DataBase:
         pass
 
     def add_companie(self, id_bank, name):
+        """
+        Adiciona uma nova empresa ao banco de dados.
+        """
         cursor = self.__request(self.insert_companie, (id_bank, name,))
         return cursor.lastrowid
     
     def edit_companie(self, id, name):
+        """
+        Edita o nome de uma empresa existente.
+        """
         self.__request(self.update_companie, (name, id))
 
     def remove_companie(self, id):
+        """
+        Remove uma empresa do banco de dados.
+        """
         self.__request(self.delete_companie, (id,))
 
     def companie(self, id_bank: int) -> dict[int, str]:
+        """
+        Retorna um dicionário de empresas para um banco específico.
+        """
         cursor = self.__request(self.query_companie, (id_bank,))
         return { id: nome for id, nome in cursor.fetchall() }
 
     def bank(self) -> dict[str, int]:
+        """
+        Retorna um dicionário de bancos disponíveis.
+        """
         cursor = self.__request(self.query_bank)
         return { 
             f'{name} - {code}': id for id, name, code in cursor.fetchall()
         }
     
     def reference(self, id_bank: int, id_companie: int):
+        """
+        Retorna as referências cadastradas para uma empresa e banco.
+        """
         cursor = self.__request(self.query_reference, (id_bank, id_companie))
         data = {key: [] for key in self.columns_reference}
         for sub in cursor.fetchall():
@@ -104,6 +128,9 @@ class DataBase:
         return ids, data
     
     def execute_change(self, id_bank, id_companie: str, change: Change):
+        """
+        Executa as alterações (add, update, remove) nas referências.
+        """
         #list[dict], dict[tuple[dict]], list[int]
         add, updt, remove = change.data()
 
@@ -127,11 +154,17 @@ class DataBase:
 
 
     def __tranform_add(self, id_bank, id_companie, add):
+        """
+        Adiciona os campos id_bank e id_companie aos dados de adição.
+        """
         for data in add:
             data['id_bank'] = id_bank
             data['id_companie'] = id_companie
 
     def __request(self, query, input = (), many = False):
+        """
+        Executa uma query SQL no banco de dados.
+        """
         with self.connection.cursor() as cursor:
             func = cursor.executemany if many else cursor.execute
             func(query, input)

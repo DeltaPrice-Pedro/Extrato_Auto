@@ -6,7 +6,7 @@ from PySide6.QtGui import (
     QPixmap, QIcon, QMovie, Qt, QFont, QMouseEvent, QBrush, QColor
 )
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from code.window_extratos import Ui_MainWindow
+from src.window_extratos import Ui_MainWindow
 from PySide6.QtCore import QThread, QSize
 from banco_do_brasil import BancoDoBrasil
 from mercado_pago import MercadoPago
@@ -29,13 +29,19 @@ from bank import Bank
 import pandas as pd
 import sys
 
-
 load_dotenv(Path(__file__).parent / 'src' / 'env' / '.env')
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+    """
+    Classe principal da interface gráfica do Conversor de Extrato.
+    Gerencia a interação do usuário, operações de CRUD e execução do processamento dos extratos.
+    """
     PLCHR_COMBOBOX = 'Selecione a opção'
 
     def __init__(self, parent = None) -> None:
+        """
+        Inicializa a janela principal, widgets, conexões e variáveis de estado.
+        """
         super().__init__(parent)
         self.setupUi(self)
 
@@ -216,6 +222,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_exit.clicked.connect(self.exit)
             
     def exit(self):
+        """
+        Gerencia a saída da tela de referência, verificando alterações não salvas.
+        """
         if self.has_change():
             if messagebox.askyesno('Aviso', self.message_exit_save) == False:
                 return None
@@ -226,16 +235,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.switch_focus('companies')
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
+        """
+        Detecta duplo clique em radio buttons para abrir referências.
+        """
         widget = self.childAt(event.position())
         if widget is not None and type(widget) == QRadioButton :
             self.open_reference(widget)
 
     def in_operation(self):
+        """
+        Alterna o estado de operação (edição/adicionar/cancelar).
+        """
         self.disable_buttons()
         hide = not self.frame_operations.isHidden()
         self.frame_operations.setHidden(hide)
         
     def disable_buttons(self, extend = True):
+        """
+        Habilita/desabilita botões conforme o estado da interface.
+        """
         self.enable_status = not self.enable_status
         disable_list = self.ref_disable_btns 
         if extend == True:
@@ -245,6 +263,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             item.setEnabled(self.enable_status) 
 
     def switch_focus(self, current_widget: str):
+        """
+        Alterna o foco entre empresas e referências.
+        """
         ref_connection = {}
         ref_tool_tip = {}
 
@@ -253,6 +274,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.re_tool_tip(ref_tool_tip)
 
     def re_connection(self, ref):
+        """
+        Reconecta os sinais dos botões conforme o contexto.
+        """
         for widget, connection in self.connections.items():
             widget.disconnect(connection)
         self.connections.clear()
@@ -261,10 +285,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.connections[widget] = widget.clicked.connect(func)
 
     def re_tool_tip(self, ref):
+        """
+        Atualiza as tooltips dos botões.
+        """
         for widget, text in ref.items():
             widget.setToolTip(text)
 
     def open_reference(self, radio: QRadioButton):
+        """
+        Abre a tela de referência para a empresa selecionada.
+        """
         self.switch_focus('reference')
         self.label_current_companie.setText(radio.text())
         self.current_companie_id = self.companies_checkbox[radio]
@@ -277,6 +307,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stackedWidget_companie.setCurrentIndex(1)
 
     def fill_reference(self, id_bank):
+        """
+        Preenche a tabela de referências com dados do banco.
+        """
         self.table_reference.clearContents()
 
         ids, data = self.db.reference(id_bank, self.current_companie_id)
@@ -292,9 +325,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.table_reference.setItem(row, column, item)
 
     def confirm_reference(self):
+        """
+        Confirma a operação de adicionar ou atualizar referência.
+        """
         self.ref_operation[self.current_operation]()
 
     def add_reference(self):
+        """
+        Prepara a interface para adicionar uma nova referência.
+        """
         for column in range(self.table_reference.columnCount()):
             input = self.inputs[column]
             self.ref_input[type(input)](self.default_resp[column], input)
@@ -303,6 +342,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stackedWidget_reference.setCurrentIndex(1)
 
     def confirm_add_refence(self):
+        """
+        Confirma a adição de uma nova referência.
+        """
         resp = self.__inputs_response()
 
         row = self.table_reference.rowCount()
@@ -319,6 +361,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stackedWidget_reference.setCurrentIndex(0)
 
     def __inputs_response(self):
+        """
+        Coleta os valores dos inputs da referência.
+        """
         resp = []
         for input in self.inputs:
             text = self.ref_input_text[type(input)](input)
@@ -326,6 +371,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return resp
     
     def updt_reference(self):
+        """
+        Prepara a interface para atualizar uma referência existente.
+        """
         self.in_operation()
         item = self.table_reference.selectedItems()[0]
         row = item.row()
@@ -338,6 +386,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stackedWidget_reference.setCurrentIndex(1)
 
     def confirm_updt_reference(self):
+        """
+        Confirma a atualização de uma referência.
+        """
         bush = ''
         edited = True
 
@@ -369,6 +420,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stackedWidget_reference.setCurrentIndex(0)
 
     def __check_updt(self, resp, row):
+        """
+        Verifica se houve alteração nos dados da referência.
+        """
         for column in range(self.table_reference.columnCount()):
             item = self.table_reference.item(row, column)
             if item.text() != resp[column]:
@@ -376,6 +430,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return False
     
     def remove_reference(self):
+        """
+        Marca uma referência para remoção ou desfaz a remoção.
+        """
         try:
             item = self.table_reference.selectedItems()[0]
             row = item.row()
@@ -396,6 +453,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror('Aviso', 'Primeiro, selecione a referência que deseja remover')
 
     def save_reference(self):
+        """
+        Salva as alterações feitas nas referências no banco de dados.
+        """
         try:
             self.disable_buttons()
 
@@ -417,6 +477,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror('Aviso', err)
 
     def has_change(self)-> bool:
+        """
+        Verifica se há alterações pendentes na tabela de referências.
+        """
         for row in range(self.table_reference.rowCount()):
             item = self.table_reference.item(row, 0)
             if item.background() != self.no_brush:
@@ -424,6 +487,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return False
 
     def change_reference(self) -> Change | None:
+        """
+        Coleta as alterações feitas na tabela de referências.
+        """
         changes = Change()
         for row in range(self.table_reference.rowCount()):
             item = self.table_reference.item(row, 0)
@@ -451,6 +517,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return changes
     
     def __data_row(self, row) -> dict[str]:
+        """
+        Retorna os dados de uma linha da tabela de referências.
+        """
         data = {}
         for column in range(self.table_reference.columnCount()):
             item = self.table_reference.item(row, column)
@@ -459,6 +528,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return data
 
     def execute(self):
+        """
+        Executa o processamento do extrato selecionado.
+        """
         try:  
             if self.arquivo.is_uploaded() == False:
                    raise FileNotFoundError() 
@@ -498,6 +570,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.alter_estado(False)
 
     def open_result(self, arquivo_final: pd.DataFrame):
+        """
+        Salva e abre o arquivo de extrato processado.
+        """
         file = asksaveasfilename(title='Favor selecionar a pasta onde será salvo', filetypes=((".xlsx","*.xlsx"),))
 
         if file == '':
@@ -513,10 +588,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         startfile(file+'.xlsx')
 
     def alter_estado(self, cond: bool):
+        """
+        Altera o estado da interface durante o processamento.
+        """
         self.exec_load(cond)
         self.pushButton_execute.setDisabled(cond)
 
     def exec_load(self, action: bool):
+        """
+        Exibe ou oculta o indicador de carregamento.
+        """
         if action == True:
             self.movie.start()
             self.stackedWidget.setCurrentIndex(1)
@@ -525,6 +606,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.stackedWidget.setCurrentIndex(0)
 
     def search_companie(self):
+        """
+        Busca e exibe as empresas cadastradas para o banco selecionado.
+        """
         if self.scrollArea.isEnabled() == False:
             self.scrollArea.setDisabled(False)
             self.label_aviso.hide()
@@ -544,6 +628,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.scrollArea.setWidget(widget)
 
     def fill_companie(self):
+        """
+        Preenche a lista de empresas cadastradas.
+        """
         empresas_disp = self.db.companie(
             self.dict_bank_text[self.comboBox.currentText()]
         )
@@ -556,6 +643,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.create_companie(id_emp, nome_emp)
 
     def create_companie(self, id_emp, nome_emp):
+        """
+        Cria um radio button para uma empresa.
+        """
         item = QRadioButton(nome_emp)
         item.__setattr__('id', id_emp)
         item.setFont(self.checkBox_font)
@@ -563,6 +653,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.vbox.addWidget(item)
 
     def add_companie(self):
+        """
+        Prepara a interface para adicionar uma nova empresa.
+        """
         self.disable_option()
         self.pushButton_confirm.hide()
         item = QLineEdit(placeholderText='Nome da empresa (min. 6 caracteres)')
@@ -574,6 +667,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.vbox.addWidget(item)
 
     def updt_companie(self):
+        """
+        Prepara a interface para atualizar o nome de uma empresa.
+        """
         try:
             check_box = self.find_option()
             self.disable_option()
@@ -591,6 +687,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.in_operation()
 
     def remove_companie(self):
+        """
+        Remove uma empresa selecionada.
+        """
         try:
             self.disable_buttons()
             self.disable_option()
@@ -611,18 +710,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.disable_option()
 
     def find_option(self):
+        """
+        Retorna o widget da empresa selecionada.
+        """
         for widget in self.companies_checkbox.keys():
             if widget.isChecked():
                 return widget
         raise Exception('Primeiro selecione a empresa')
 
     def disable_option(self):
+        """
+        Habilita/desabilita as opções de empresa.
+        """
         disable = self.disable_status
         self.disable_status = not disable
         for widget in self.companies_checkbox.keys():
             widget.setDisabled(disable)
 
     def confirm_companie(self):
+        """
+        Confirma a adição ou atualização de uma empresa.
+        """
         try:
             item = self.current_item_edited
             name = item.text()
@@ -647,6 +755,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showwarning('Aviso', error)
 
     def cancel_companie(self):
+        """
+        Cancela a operação de adição/edição de empresa.
+        """
         item = self.current_item_edited
         id = item.__getattribute__('id')
         if id != None:
@@ -656,23 +767,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         item.deleteLater()
 
     def companie_valid(self):
+        """
+        Valida o nome da empresa inserido.
+        """
         hide = True
         if len(self.current_item_edited.text()) > self.min_carc_companie:
             hide = False
         self.pushButton_confirm.setHidden(hide)
 
     def reference(self, id_bank: int) -> int:
+        """
+        Retorna as referências cadastradas para a empresa selecionada.
+        """
         for widget, id_emp in self.companies_checkbox.items():
             if widget.isChecked():
                 return self.db.reference(id_bank, id_emp)[1]
         return {}
 
     def bank(self) -> Bank:
+        """
+        Retorna a instância do banco selecionado.
+        """
         for key, bank in self.dict_nick_bank.items():
             if key in self.comboBox.currentText().lower():
                 return bank
 
     def attach(self):
+        """
+        Realiza o upload do arquivo de extrato.
+        """
         try:
             file_stem = self.arquivo.set_path(askopenfilename())
             if file_stem != None:
@@ -690,6 +813,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             messagebox.showerror(title='Aviso', message= error)
 
     def select_combo(self, file_stem: str):
+        """
+        Seleciona automaticamente o banco no combobox com base no nome do arquivo.
+        """
         for key in self.dict_nick_bank.keys():
             if key in file_stem.lower():
                 self.comboBox.setCurrentIndex(
@@ -699,6 +825,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 )
 
 if __name__ == '__main__':
+    """
+    Ponto de entrada da aplicação.
+    """
     app = QApplication()
     window = MainWindow()
     window.show()

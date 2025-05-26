@@ -2,7 +2,13 @@ from file import File
 from bank import Bank
 
 class IClassico_Itau:
+    """
+    Classe para processamento do extrato clássico do Itaú.
+    """
     def extrato(self, arquivo):
+        """
+        Processa o extrato clássico do Itaú.
+        """
         self.filt_colunas(
             arquivo.leitura_custom(area_lida= [30,0,80,80]),\
                 ["Data Mov.", "", "", "Valor"])
@@ -13,6 +19,9 @@ class IClassico_Itau:
         return self.df.loc[self.df['Valor'] != ''].reset_index(drop=True)
 
     def __col_hist(self):
+        """
+        Cria coluna de histórico a partir da coluna de data.
+        """
         coluna_hist = []
         hist = ''
         self.df.fillna('', inplace=True)
@@ -26,7 +35,13 @@ class IClassico_Itau:
         self.df.insert(5,'Histórico',coluna_hist) #precisa passar por todas linhas de uma vez
 
 class IDecorado_Itau:
+    """
+    Classe para processamento do extrato decorado do Itaú.
+    """
     def extrato(self, arquivo):
+        """
+        Processa o extrato decorado do Itaú.
+        """
         tabela1 = arquivo.leitura_custom(area_lida=[70,25,98,80], pg=1)[0]
         pg = 1
 
@@ -50,6 +65,9 @@ class IDecorado_Itau:
         return self.df
     
     def ler_extensao(self, arquivor: File, pg_inicio: int, pg_fim: int, topo = 10):
+        """
+        Lê páginas adicionais do extrato decorado do Itaú.
+        """
         arquivo = []
         baixo = 98
         for i in range(pg_inicio + 1, arquivor.lenght() - pg_fim):
@@ -65,6 +83,9 @@ class IDecorado_Itau:
         return arquivo
     
     def __juntar_valores(self):
+        """
+        Junta valores temporários à coluna 'Valor'.
+        """
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():
             if row['valor-temp'] != '':
@@ -73,6 +94,9 @@ class IDecorado_Itau:
         self.df = self.df.loc[self.df['Valor'] != '(débitos)'].reset_index(drop=True)
     
     def __add_datas(self):
+        """
+        Preenche datas ausentes com a última data válida.
+        """
         data_atual = self.df.loc[[0],['Data Mov.']]
         for index, row in self.df.iterrows():
             if row['Data Mov.'] == '':
@@ -81,11 +105,17 @@ class IDecorado_Itau:
                 data_atual = row['Data Mov.']
 
 class Itau(Bank, IDecorado_Itau, IClassico_Itau):
+    """
+    Classe principal para processamento de extratos do Itaú.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'Itau'
 
     def tipo(self, arquivo: File):
+        """
+        Determina o tipo de extrato (decorado ou clássico).
+        """
         arquivo_teste = arquivo.custom_read(area_lida=[0,0,100,100], pg=1)[0]
         arquivo_teste.fillna('', inplace=True)
 
@@ -94,6 +124,9 @@ class Itau(Bank, IDecorado_Itau, IClassico_Itau):
         return False
 
     def gerar_extrato(self, arquivo):
+        """
+        Gera o extrato do Itaú conforme o tipo detectado.
+        """
         if self.tipo(arquivo) == True:
             return IDecorado_Itau.extrato(self, arquivo)
         return IClassico_Itau.extrato(self, arquivo)

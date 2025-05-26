@@ -2,11 +2,17 @@ from bank import Bank
 from file import File
 
 class PagBank(Bank):
+    """
+    Classe para processamento de extratos do PagBank.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'PagBank'
 
     def gerar_extrato(self, arquivo: File):
+        """
+        Gera o extrato do PagBank a partir do arquivo fornecido.
+        """
         qnt_pages = arquivo.lenght()
 
         tabela1 = arquivo.custom_read(area_lida=[16,0,100,100], pg=1)
@@ -25,6 +31,9 @@ class PagBank(Bank):
         return self.df
 
     def __filtro_linhas(self):
+        """
+        Ajusta linhas do extrato do PagBank.
+        """
         self.df.fillna('', inplace=True)
         for index, row in self.df.iterrows():
             self.df.loc[[index], ['Data']] = row.Data[:10]

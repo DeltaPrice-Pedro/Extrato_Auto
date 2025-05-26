@@ -3,11 +3,17 @@ from file import File
 import pandas as pd
 
 class Caixa(Bank):
+    """
+    Classe para processamento de extratos da Caixa Econômica Federal.
+    """
     def __init__(self):
         super().__init__()
         self.titulo = 'Caixa'
 
     def gerar_extrato(self, arquivo: File):
+        """
+        Gera o extrato da Caixa a partir do arquivo fornecido.
+        """
         arquivor = arquivo.simple_read()[0]
         arquivor.fillna(0.0, inplace=True)
         if arquivor.iloc[0,0] == 0.0:
@@ -23,6 +29,9 @@ class Caixa(Bank):
         return self.df.loc[self.df['Histórico'] != 0.0]
 
     def leitura_alternativa(self, arquivo: File) -> list[pd.DataFrame]:
+        """
+        Realiza leitura alternativa para casos específicos de layout de extrato da Caixa.
+        """
         qnt_pages = arquivo.lenght()
         tabela1 = arquivo.custom_read([30,0,95,80], '1', False)[0]
 
