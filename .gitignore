@@ -1,6 +1,5 @@
 /venv
-/code/__pycache__
-/code/src/__pycache__
+**/__pycache__
 /build
 /dist
 *.spec

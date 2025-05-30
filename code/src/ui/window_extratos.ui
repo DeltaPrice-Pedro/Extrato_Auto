@@ -592,7 +592,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
                            </font>
                           </property>
                           <property name="text">
-                           <string>Valor</string>
+                           <string>Conta</string>
                           </property>
                           <property name="alignment">
                            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>

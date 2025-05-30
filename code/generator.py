@@ -13,14 +13,14 @@ class Generator(QObject):
     fim = Signal(bool)
     open = Signal(pd.DataFrame)
 
-    def __init__(self, banco: Bank, arquivo: File, id_banco: int, relacoes: dict[int, str]) -> None:
+    def __init__(self, banco: Bank, arquivo: File, bank_account: int, relacoes: dict[int, str]) -> None:
         """
         Inicializa o gerador com o banco, arquivo, id do banco e relações de referência.
         """
         super().__init__()
         self.banco = banco
         self.arquivo = arquivo
-        self.id_banco = id_banco
+        self.bank_account = bank_account
         self.relacoes = relacoes
 
     def extrato(self):
@@ -56,13 +56,13 @@ class Generator(QObject):
 
         for index, row in arquivo_novo.iterrows():
             if row['Inf.'] == 'C':
-                row['Cód. Conta Débito'] = self.id_banco
+                row['Cód. Conta Débito'] = self.bank_account
                 value = self.search_word(word_value_c, row)
                 if value != None:
                     row['Cód. Conta Crédito'] = value
 
             else:
-                row['Cód. Conta Crédito'] = self.id_banco
+                row['Cód. Conta Crédito'] = self.bank_account
                 value = self.search_word(word_value_d, row)
                 if value != None:
                     row['Cód. Conta Débito'] = value

@@ -8,22 +8,22 @@ from PySide6.QtGui import (
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from src.window_extratos import Ui_MainWindow
 from PySide6.QtCore import QThread, QSize
-from banco_do_brasil import BancoDoBrasil
-from mercado_pago import MercadoPago
+from banks.banco_do_brasil import BancoDoBrasil
+from banks.mercado_pago import MercadoPago
 from generator import Generator
 from tkinter import messagebox
 from dotenv import load_dotenv
 from database import DataBase
-from bradesco import Bradesco
-from pag_bank import PagBank
-from santa_fe import SantaFe
+from banks.bradesco import Bradesco
+from banks.pag_bank import PagBank
+from banks.santa_fe import SantaFe
 from changes import Change
-from sicoob import Sicoob
+from banks.sicoob import Sicoob
 from os import startfile
 from pathlib import Path
-from caixa import Caixa
-from inter import Inter
-from itau import Itau
+from banks.caixa import Caixa
+from banks.inter import Inter
+from banks.itau import Itau
 from file import File
 from bank import Bank
 import pandas as pd
@@ -538,13 +538,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if self.has_change() == True:
                 raise Exception('Antes de executar, salve as alterações feitas ou as descarte clicando em "voltar"')
 
-            id_bank = self.dict_bank_text.get(self.comboBox.currentText())
+            option = self.comboBox.currentText()
+            id_bank = self.dict_bank_text.get(option)
             reference = self.reference(id_bank)
             bank = self.bank()
             self._gerador = Generator(
                 bank,
                 self.arquivo,
-                id_bank,
+                option[option.rfind('-')+2:],
                 reference
             )
             self._thread = QThread()

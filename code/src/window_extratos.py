@@ -659,7 +659,7 @@ class Ui_MainWindow(object):
         self.comboBox_release.setItemText(0, QCoreApplication.translate("MainWindow", u"C", None))
         self.comboBox_release.setItemText(1, QCoreApplication.translate("MainWindow", u"D", None))
 
-        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Valor", None))
+        self.label_7.setText(QCoreApplication.translate("MainWindow", u"Conta", None))
         self.pushButton_exit.setText(QCoreApplication.translate("MainWindow", u"Voltar", None))
         self.label_current_companie.setText(QCoreApplication.translate("MainWindow", u"Empresa", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

@@ -16,11 +16,11 @@ class Bradesco(Bank):
         """
         qnt_pages = arquivo.lenght()
 
-        tabela1 = arquivo.custom_read(area_lida=[25,0,100,80], pg=1)
+        tabela1 = arquivo.custom_read(area_lida=[25,0,100,100], pg=1)
         
         if qnt_pages > 1:
             arquivo_complt = arquivo.custom_read(pg=f'2-{qnt_pages}',\
-                area_lida=[8,0,100,100])
+                area_lida=[9,0,100,100])
             
         arquivo_complt.insert(0,tabela1[0])
 
@@ -37,10 +37,7 @@ class Bradesco(Bank):
         Ajusta as colunas dos DataFrames conforme o padrão do Bradesco.
         """
         for tabelas in arquivo:
-            if len(tabelas.columns) != 6:
-                tabelas.columns = ["Data", "Histórico", "Crédito", "Débito", ""]
-                continue 
-            tabelas.columns = ["Data", "Histórico", "", "Crédito", "Débito"]
+            tabelas.columns = ["Data", "Histórico", "", "Crédito", "Débito", ""]
 
         self.df = pd.concat(arquivo, ignore_index=True)
         self.df = self.df.drop('', axis=1)

@@ -57,7 +57,7 @@ class IClassico_Inter():
         Processa o extrato clássico do Banco Inter.
         """
         self.filt_colunas(
-            arquivo.custom_read(area_lida= [0,0,100,77], header=False),["Data", "Valor"])
+            arquivo.custom_read(area_lida= [0,0,93,77], header=False),["Data", "Valor"])
         self.__inserir_espacos()
         self.col_inf_sinal()
         self.__col_data()
