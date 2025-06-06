@@ -24,7 +24,7 @@ class Bradesco(Bank):
             
         arquivo_complt.insert(0,tabela1[0])
 
-        self.__filtro_colunas(arquivo_complt)
+        self.filt_colunas(arquivo_complt, ["Data", "Histórico", "", "Crédito", "Débito", ""])
         self.inserir_espacos(troca=False, ordem_espacos=[1,2,3])
         self.__col_inf()
         self.__col_data()

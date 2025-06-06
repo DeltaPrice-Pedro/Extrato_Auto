@@ -8,26 +8,29 @@ from PySide6.QtGui import (
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from src.window_extratos import Ui_MainWindow
 from PySide6.QtCore import QThread, QSize
-from banks.banco_do_brasil import BancoDoBrasil
-from banks.mercado_pago import MercadoPago
 from generator import Generator
 from tkinter import messagebox
 from dotenv import load_dotenv
 from database import DataBase
-from banks.bradesco import Bradesco
-from banks.pag_bank import PagBank
-from banks.santa_fe import SantaFe
 from changes import Change
-from banks.sicoob import Sicoob
 from os import startfile
 from pathlib import Path
-from banks.caixa import Caixa
-from banks.inter import Inter
-from banks.itau import Itau
 from file import File
 from bank import Bank
 import pandas as pd
 import sys
+
+from banks.banco_do_brasil import BancoDoBrasil
+from banks.mercado_pago import MercadoPago
+from banks.pru_wallet import PruWallet
+from banks.bradesco import Bradesco
+from banks.santa_fe import SantaFe
+from banks.pag_bank import PagBank
+from banks.sicoob import Sicoob
+from banks.caixa import Caixa
+from banks.inter import Inter
+from banks.itau import Itau
+
 
 load_dotenv(Path(__file__).parent / 'src' / 'env' / '.env')
 
@@ -111,6 +114,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             'mercado pago': MercadoPago(),
             'bradesco': Bradesco(),
             'pagbank': PagBank(),
+            'pruwallet': PruWallet(),
         }
 
         self.connections = {}
