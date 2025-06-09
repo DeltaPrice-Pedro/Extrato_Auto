@@ -117,7 +117,8 @@ class Sicoob(Bank):
                 if linhaAbaixo['Histórico'] != '':
                     indexPai = self.buscarLinhaPai(index - 1, self.df)
                     linhaPai = self.df.iloc[indexPai]
-                    self.df.loc[[indexPai], ['Histórico']] = str(linhaPai['Histórico']) + ' - ' + str(row['Histórico'])
+                    if indexPai != -1:
+                        self.df.loc[[indexPai], ['Histórico']] = str(linhaPai['Histórico']) + ' - ' + str(row['Histórico'])
                 else:
                     self.df.loc[[index + 1],['Histórico']] = str(linhaAbaixo['Histórico']) + ' - ' + str(row['Histórico'])
 
